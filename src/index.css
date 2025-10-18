@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* AgriCare Design System - Agriculture-inspired colors and styles */
+
+@layer base {
+  :root {
+    /* Core AgriCare Brand Colors */
+    --primary: 142 76% 36%;          /* Rich forest green */
+    --primary-light: 142 65% 55%;    /* Lighter green */
+    --primary-dark: 142 85% 25%;     /* Darker green */
+    --primary-foreground: 0 0% 100%; /* White text on green */
+
+    /* Nature-inspired Secondary Colors */
+    --secondary: 43 74% 49%;         /* Golden wheat */
+    --secondary-light: 43 65% 65%;   /* Light golden */
+    --secondary-foreground: 0 0% 100%;
+
+    /* Earth Tones */
+    --earth-brown: 25 45% 37%;       /* Rich soil brown */
+    --earth-tan: 33 33% 82%;         /* Light tan */
+    --sky-blue: 207 89% 54%;         /* Clear sky blue */
+
+    /* Background & Surface Colors */
+    --background: 120 25% 98%;        /* Very light mint background */
+    --surface: 0 0% 100%;            /* Pure white surfaces */
+    --surface-soft: 120 15% 96%;     /* Soft green-tinted surface */
+    
+    /* Text Colors */
+    --foreground: 142 25% 15%;        /* Dark green text */
+    --foreground-muted: 142 15% 45%;  /* Muted green text */
+    --foreground-light: 142 10% 65%;  /* Light muted text */
+
+    /* Interactive Elements */
+    --accent: 27 96% 61%;            /* Orange accent for CTAs */
+    --accent-foreground: 0 0% 100%;   /* White on orange */
+    
+    /* Status Colors */
+    --success: 142 76% 36%;          /* Success green (same as primary) */
+    --warning: 43 89% 56%;           /* Warning yellow */
+    --error: 0 84% 60%;              /* Error red */
+    --info: 207 89% 54%;             /* Info blue */
+    
+    /* Borders & Inputs */
+    --border: 142 30% 85%;           /* Soft green border */
+    --border-light: 142 20% 90%;     /* Very light border */
+    --input: 142 25% 93%;            /* Input background */
+    --ring: 142 76% 36%;             /* Focus ring (primary) */
+
+    /* Card & Component Colors */
+    --card: 0 0% 100%;
+    --card-foreground: 142 25% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 142 25% 15%;
+    --muted: 120 15% 96%;
+    --muted-foreground: 142 15% 45%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 65% 55%));
+    --gradient-secondary: linear-gradient(135deg, hsl(43 74% 49%), hsl(43 65% 65%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(120 65% 45%) 50%, hsl(43 74% 49%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(120 15% 98%) 100%);
+
+    /* Shadows */
+    --shadow-soft: 0 2px 8px hsl(142 76% 36% / 0.1);
+    --shadow-medium: 0 4px 16px hsl(142 76% 36% / 0.15);
+    --shadow-large: 0 8px 32px hsl(142 76% 36% / 0.2);
+    --shadow-accent: 0 4px 16px hsl(27 96% 61% / 0.25);
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
