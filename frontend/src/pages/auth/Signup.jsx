@@ -1,12 +1,13 @@
-﻿import React, { useState } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUser } from "../../App";
 import { User, Tractor, Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import API from "../../api";
 
 const Signup = () => {
   const [selectedRole, setSelectedRole] = useState(null);
@@ -14,46 +15,72 @@ const Signup = () => {
     name: "",
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  const { setUser } = useUser();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Ensure CSRF token is available
+  useEffect(() => {
+    const ensureCSRFToken = async () => {
+      try {
+        await API.get("/login");
+        console.log("CSRF token ready for signup");
+      } catch (error) {
+        console.error("Failed to get CSRF token:", error);
+      }
+    };
+    ensureCSRFToken();
+  }, []);
+
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    console.log("Form submitted", formData, selectedRole);
 
-    if (!selectedRole) return alert("Please select a role (Farmer or Customer)");
-    if (formData.password !== formData.confirmPassword) return alert("Passwords do not match");
-    if (formData.password.length < 6) return alert("Password must be at least 6 characters");
-
-    setIsLoading(true);
-
-    setTimeout(() => {
-      // Set user in context
-      setUser({
-        email: formData.email,
-        name: formData.name,
-        role: selectedRole
+    if (!selectedRole)
+      return toast({
+        title: "Select a role",
+        description: "Please choose whether you are a farmer or a customer.",
+        variant: "destructive",
       });
 
-      alert(`Welcome! Your ${selectedRole} account has been created`);
+    if (formData.password !== formData.confirmPassword)
+      return toast({
+        title: "Passwords do not match",
+        variant: "destructive",
+      });
 
-      // Navigate to role-specific dashboard
-      navigate(selectedRole === "farmer" ? "/farmer" : "/customer");
+    try {
+      setIsLoading(true);
+      await API.post("/register", {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: selectedRole,
+      });
+
+      toast({
+        title: "Account created!",
+        description: "You can now log in to your account.",
+      });
+
+      navigate("/login");
+    } catch (error) {
+      console.error("Signup error:", error);
+      toast({
+        title: "Signup failed",
+        description: error.response?.data?.detail || error.response?.data || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   // Role selection screen
@@ -68,11 +95,13 @@ const Signup = () => {
         >
           <div className="text-center space-y-4">
             <h1 className="text-3xl font-bold text-foreground">Join AgriCare</h1>
-            <p className="text-muted-foreground">Choose your account type to get started</p>
+            <p className="text-muted-foreground">
+              Choose your account type to get started
+            </p>
           </div>
 
           <div className="grid gap-4">
-            {/* Farmer Card */}
+            {/* Farmer */}
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Card
                 className="cursor-pointer border-2 hover:border-primary transition-all duration-200 hover:shadow-medium"
@@ -90,7 +119,7 @@ const Signup = () => {
               </Card>
             </motion.div>
 
-            {/* Customer Card */}
+            {/* Customer */}
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Card
                 className="cursor-pointer border-2 hover:border-primary transition-all duration-200 hover:shadow-medium"
@@ -125,7 +154,11 @@ const Signup = () => {
         <Card className="shadow-large">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center shadow-soft">
-              {selectedRole === "farmer" ? <Tractor className="h-8 w-8 text-white" /> : <User className="h-8 w-8 text-white" />}
+              {selectedRole === "farmer" ? (
+                <Tractor className="h-8 w-8 text-white" />
+              ) : (
+                <User className="h-8 w-8 text-white" />
+              )}
             </div>
             <CardTitle className="text-2xl">
               Sign up as {selectedRole === "farmer" ? "Farmer" : "Customer"}
@@ -140,38 +173,20 @@ const Signup = () => {
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                />
+                <Input name="name" value={formData.name} onChange={handleInputChange} required />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                />
+                <Input name="email" type="email" value={formData.email} onChange={handleInputChange} required />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label>Password</Label>
                 <div className="relative">
                   <Input
-                    id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Create a password (min. 6 characters)"
                     value={formData.password}
                     onChange={handleInputChange}
                     required
@@ -180,7 +195,7 @@ const Signup = () => {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full px-3 py-2"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -189,13 +204,11 @@ const Signup = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label>Confirm Password</Label>
                 <div className="relative">
                   <Input
-                    id="confirmPassword"
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm your password"
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     required
@@ -204,7 +217,7 @@ const Signup = () => {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full px-3 py-2"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -212,19 +225,10 @@ const Signup = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90 shadow-medium" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90" disabled={isLoading}>
                 {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
-
-            <div className="text-center">
-              <p className="text-muted-foreground">
-                Already have an account?{" "}
-                <button onClick={() => navigate("/login")} className="text-primary hover:underline font-medium">
-                  Login
-                </button>
-              </p>
-            </div>
           </CardContent>
         </Card>
       </motion.div>

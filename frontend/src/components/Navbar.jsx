@@ -13,15 +13,16 @@ import {
   Package,
   Camera,
 } from "lucide-react";
+import axios from "axios";
 
 const Navbar = () => {
   const { user, logout } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  const handleLogout = async () => {
+    await logout(); // calls backend /logout to delete cookie
+    navigate("/login");
   };
 
   // Public navbar links
@@ -147,4 +148,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
