@@ -7,6 +7,10 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import FarmerLayout from "./layouts/FarmerLayout";
 import CustomerLayout from "./layouts/CustomerLayout";
+import Toast from "./components/ui/toast";
+
+// Contexts
+import { ToastProvider, useToast } from "./contexts/ToastContext";
 
 // Pages
 import Home from "./pages/Home";
@@ -31,25 +35,32 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
-const App = () => {
+// Main App Content Component
+const AppContent = () => {
+  const { toast } = useToast();
   const [user, setUser] = useState({ role: null, name: null, email: null });
   const [loading, setLoading] = useState(true);
 
-  // logout function
   const logout = async () => {
     try {
       await API.post("/logout");
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account.",
+        variant: "success"
+      });
     } catch (err) {
       console.error("Logout failed:", err);
-    } finally {
-      // Clear token from storage
-      localStorage.removeItem('auth_token');
-      setUser({ role: null, name: null, email: null });
+      toast({
+        title: "Logout failed",
+        description: "There was an issue logging out.",
+        variant: "destructive"
+      });
     }
+    setUser({ role: null, name: null, email: null });
   };
 
   // Fetch user on page load
-  // In App.jsx, update the useEffect:
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -61,13 +72,11 @@ const App = () => {
         });
       } catch (err) {
         console.log("Not logged in yet");
-        // Remove invalid token
-        localStorage.removeItem('auth_token');
       } finally {
         setLoading(false);
       }
     };
-
+    
     // Check if we have a token before making the request
     const token = localStorage.getItem('auth_token');
     if (token) {
@@ -105,9 +114,21 @@ const App = () => {
             </Routes>
           </main>
           <Footer />
+          
+          {/* Toast Container */}
+          <Toast />
         </div>
       </Router>
     </UserContext.Provider>
+  );
+};
+
+// Main App wrapper
+const App = () => {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 };
 

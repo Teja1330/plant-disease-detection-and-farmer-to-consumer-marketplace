@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,19 +15,27 @@ import {
   Grid3X3,
   List
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Marketplace = () => {
+  const { toast } = useToast();
   const [viewMode, setViewMode] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [cart, setCart] = useState([]);
 
-  // ✅ Corrected products array
+  useEffect(() => {
+    // Load cart from localStorage on component mount
+    const savedCart = JSON.parse(localStorage.getItem('cart')) || [];
+    setCart(savedCart);
+  }, []);
+
   const products = [
     {
       id: 1,
       name: "Organic Tomatoes",
       farmer: "Green Valley Farm",
-      price: 0.99,
+      price: 4.99,
       unit: "lb",
       rating: 4.8,
       reviewCount: 120,
@@ -43,7 +51,7 @@ const Marketplace = () => {
       id: 2,
       name: "Fresh Spinach",
       farmer: "Sunny Acres",
-      price: 1.5,
+      price: 3.50,
       unit: "bunch",
       rating: 4.9,
       reviewCount: 85,
@@ -59,7 +67,7 @@ const Marketplace = () => {
       id: 3,
       name: "Sweet Corn",
       farmer: "Prairie Fields",
-      price: 2.0,
+      price: 6.00,
       unit: "dozen",
       rating: 4.7,
       reviewCount: 64,
@@ -75,7 +83,7 @@ const Marketplace = () => {
       id: 4,
       name: "Baby Carrots",
       farmer: "Earth Garden",
-      price: 1.99,
+      price: 2.99,
       unit: "lb",
       rating: 4.6,
       reviewCount: 45,
@@ -107,7 +115,7 @@ const Marketplace = () => {
       id: 6,
       name: "Fresh Basil",
       farmer: "Herb Haven",
-      price: 1.5,
+      price: 2.50,
       unit: "bunch",
       rating: 4.9,
       reviewCount: 50,
@@ -123,7 +131,6 @@ const Marketplace = () => {
 
   const categories = ["All", "Vegetables", "Fruits", "Leafy Greens", "Root Vegetables", "Herbs"];
 
-  // ✅ Filter logic
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           product.farmer.toLowerCase().includes(searchQuery.toLowerCase());
@@ -131,25 +138,55 @@ const Marketplace = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // ✅ Fixed renderStars
-  const renderStars = (rating) => {
-    const stars = [];
-    for (let i = 0; i < 5; i++) {
-      stars.push(
-        <Star
-          key={i}
-          className={`h-4 w-4 ${
-            i < Math.floor(rating)
-              ? "fill-secondary text-secondary"
-              : "text-muted-foreground"
-          }`}
-        />
-      );
+  const handleAddToCart = (product) => {
+    if (!product.inStock) {
+      toast({
+        title: "Out of Stock",
+        description: `${product.name} is currently out of stock.`,
+        variant: "destructive"
+      });
+      return;
     }
-    return stars;
+
+    const existingCart = JSON.parse(localStorage.getItem('cart')) || [];
+    const existingItem = existingCart.find(item => item.id === product.id);
+
+    if (existingItem) {
+      existingItem.quantity += 1;
+      toast({
+        title: "Cart Updated",
+        description: `Increased quantity of ${product.name} in your cart.`,
+        variant: "success"
+      });
+    } else {
+      existingCart.push({
+        ...product,
+        quantity: 1
+      });
+      toast({
+        title: "Added to Cart! 🛒",
+        description: `${product.name} has been added to your cart.`,
+        variant: "success"
+      });
+    }
+
+    localStorage.setItem('cart', JSON.stringify(existingCart));
+    setCart(existingCart);
   };
 
-  // ✅ Fixed ProductCard component
+  const renderStars = (rating) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`h-4 w-4 ${
+          i < Math.floor(rating)
+            ? "fill-yellow-400 text-yellow-400"
+            : "text-gray-300"
+        }`}
+      />
+    ));
+  };
+
   const ProductCard = ({ product, index }) => (
     <motion.div
       initial={{ opacity: 0, y: 50 }}
@@ -157,13 +194,13 @@ const Marketplace = () => {
       transition={{ duration: 0.6, delay: index * 0.1 }}
     >
       <Card
-        className={`hover:shadow-medium transition-all duration-300 bg-gradient-card ${
+        className={`hover:shadow-lg transition-all duration-300 bg-white border border-gray-200 ${
           !product.inStock ? "opacity-60" : ""
         }`}
       >
         <CardContent className="p-0">
-          <div className="aspect-square bg-surface-soft rounded-t-lg flex items-center justify-center relative">
-            <Leaf className="h-12 w-12 text-primary/30" />
+          <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center relative">
+            <Leaf className="h-12 w-12 text-green-300" />
             {product.organic && (
               <Badge className="absolute top-2 left-2 bg-green-500 text-white text-xs">
                 Organic
@@ -177,41 +214,42 @@ const Marketplace = () => {
           </div>
           <div className="p-4 space-y-3">
             <div>
-              <h3 className="font-semibold text-foreground">{product.name}</h3>
-              <p className="text-sm text-muted-foreground">{product.farmer}</p>
+              <h3 className="font-semibold text-gray-900">{product.name}</h3>
+              <p className="text-sm text-gray-600">{product.farmer}</p>
             </div>
 
             <div className="flex items-center space-x-1">
               <div className="flex">{renderStars(product.rating)}</div>
               <span className="text-sm font-medium">{product.rating}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-gray-500">
                 ({product.reviewCount})
               </span>
             </div>
 
-            <p className="text-sm text-muted-foreground line-clamp-2">
+            <p className="text-sm text-gray-600 line-clamp-2">
               {product.description}
             </p>
 
             <div className="space-y-1">
-              <div className="flex items-center text-xs text-muted-foreground">
+              <div className="flex items-center text-xs text-gray-500">
                 <MapPin className="h-3 w-3 mr-1" />
                 {product.location}
               </div>
-              <div className="flex items-center text-xs text-muted-foreground">
+              <div className="flex items-center text-xs text-gray-500">
                 <Clock className="h-3 w-3 mr-1" />
                 Harvested {product.harvestDate}
               </div>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-primary">
+              <span className="text-lg font-bold text-green-600">
                 ${product.price.toFixed(2)}/{product.unit}
               </span>
               <Button
                 size="sm"
-                className="bg-gradient-primary hover:opacity-90"
+                className="bg-green-600 hover:bg-green-700"
                 disabled={!product.inStock}
+                onClick={() => handleAddToCart(product)}
               >
                 <ShoppingCart className="h-4 w-4 mr-1" />
                 {product.inStock ? "Add" : "Out"}
@@ -224,7 +262,7 @@ const Marketplace = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
         {/* Header */}
         <motion.div
@@ -233,8 +271,8 @@ const Marketplace = () => {
           transition={{ duration: 0.8 }}
           className="space-y-4 mb-8"
         >
-          <h1 className="text-4xl font-bold text-foreground">Marketplace</h1>
-          <p className="text-lg text-muted-foreground">
+          <h1 className="text-4xl font-bold text-gray-900">Marketplace</h1>
+          <p className="text-lg text-gray-600">
             Fresh produce directly from local farmers
           </p>
         </motion.div>
@@ -247,12 +285,12 @@ const Marketplace = () => {
           className="space-y-4 mb-8"
         >
           <div className="relative max-w-2xl">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <Input
               placeholder="Search products or farmers..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-3 border-2 border-border focus:border-primary"
+              className="pl-10 pr-4 py-3 border-2 border-gray-300 focus:border-green-500"
             />
           </div>
 
@@ -266,8 +304,8 @@ const Marketplace = () => {
                   onClick={() => setSelectedCategory(category)}
                   className={
                     selectedCategory === category
-                      ? "bg-gradient-primary hover:opacity-90"
-                      : "border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
                   }
                 >
                   {category}
@@ -276,17 +314,26 @@ const Marketplace = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                onClick={() => toast({
+                  title: "More Filters",
+                  description: "Advanced filtering options coming soon!",
+                  variant: "default"
+                })}
+              >
                 <Filter className="h-4 w-4 mr-2" />
                 More Filters
               </Button>
 
-              <div className="flex border border-border rounded-lg overflow-hidden">
+              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                 <Button
                   variant={viewMode === "grid" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setViewMode("grid")}
-                  className="rounded-none"
+                  className="rounded-none bg-white hover:bg-gray-100 border-0"
                 >
                   <Grid3X3 className="h-4 w-4" />
                 </Button>
@@ -294,7 +341,7 @@ const Marketplace = () => {
                   variant={viewMode === "list" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setViewMode("list")}
-                  className="rounded-none"
+                  className="rounded-none bg-white hover:bg-gray-100 border-0"
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -310,7 +357,7 @@ const Marketplace = () => {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="mb-6"
         >
-          <p className="text-muted-foreground">
+          <p className="text-gray-600">
             Showing {filteredProducts.length} products
             {selectedCategory !== "All" && ` in ${selectedCategory}`}
             {searchQuery && ` matching "${searchQuery}"`}
@@ -338,20 +385,25 @@ const Marketplace = () => {
             transition={{ duration: 0.8 }}
             className="text-center py-16"
           >
-            <Search className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold text-foreground mb-2">
+            <Search className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
               No products found
             </h3>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-gray-600 mb-6">
               Try adjusting your search or filter criteria
             </p>
             <Button
               onClick={() => {
                 setSearchQuery("");
                 setSelectedCategory("All");
+                toast({
+                  title: "Filters cleared",
+                  description: "All search filters have been reset.",
+                  variant: "success"
+                });
               }}
               variant="outline"
-              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
             >
               Clear Filters
             </Button>
@@ -369,7 +421,12 @@ const Marketplace = () => {
             <Button
               variant="outline"
               size="lg"
-              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+              onClick={() => toast({
+                title: "More Products",
+                description: "Loading additional products...",
+                variant: "default"
+              })}
             >
               Load More Products
             </Button>
