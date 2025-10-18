@@ -271,7 +271,7 @@ const Dashboard = () => {
                   <Link to="/farmer/store">
                     <Button 
                       variant="outline" 
-                      className="w-full border-white text-white hover:bg-white hover:text-primary"
+                      className="w-full border-white text-primary hover:bg-white hover:text-primary"
                     >
                       <Package className="h-4 w-4 mr-2" />
                       Manage Store
@@ -281,7 +281,7 @@ const Dashboard = () => {
                   <Link to="/farmer/detection">
                     <Button 
                       variant="outline" 
-                      className="w-full border-white text-white hover:bg-white hover:text-primary"
+                      className="w-full border-white text-primary hover:bg-white hover:text-primary"
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       Disease Detection
@@ -291,7 +291,7 @@ const Dashboard = () => {
                   <Link to="/farmer/reports">
                     <Button 
                       variant="outline" 
-                      className="w-full border-white text-white hover:bg-white hover:text-primary"
+                      className="w-full border-white text-primary hover:bg-white hover:text-primary"
                     >
                       <BarChart3 className="h-4 w-4 mr-2" />
                       View Reports

@@ -1,55 +1,44 @@
+// hooks/use-toast.js
 import { useState, useCallback } from "react";
-import { v4 as uuidv4 } from "uuid";
 
-const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 5000; // 5 seconds
-
-// Map to keep track of toast removal timeouts
-const toastTimeouts = new Map();
-
+// Simple toast implementation that uses browser alerts as fallback
 export const useToast = () => {
   const [toasts, setToasts] = useState([]);
 
-  // Function to remove a toast
-  const removeToast = useCallback((toastId) => {
-    setToasts((prev) => prev.filter((t) => t.id !== toastId));
-    if (toastTimeouts.has(toastId)) {
-      clearTimeout(toastTimeouts.get(toastId));
-      toastTimeouts.delete(toastId);
+  const toast = useCallback(({ title, description, variant = "default" }) => {
+    // Fallback to alert if no toast UI is available
+    if (typeof window !== "undefined") {
+      if (variant === "destructive") {
+        alert(`❌ ${title}\n${description}`);
+      } else {
+        alert(`✅ ${title}\n${description}`);
+      }
     }
+
+    // For actual toast implementation (commented out for now)
+    /*
+    const newToast = {
+      id: Date.now(),
+      title,
+      description,
+      variant,
+    };
+    
+    setToasts((prev) => [...prev, newToast]);
+    
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== newToast.id));
+    }, 5000);
+    */
   }, []);
 
-  // Function to add toast to remove queue
-  const addToRemoveQueue = useCallback((toastId) => {
-    if (toastTimeouts.has(toastId)) return;
-
-    const timeout = setTimeout(() => {
-      removeToast(toastId);
-    }, TOAST_REMOVE_DELAY);
-
-    toastTimeouts.set(toastId, timeout);
-  }, [removeToast]);
-
-  // Function to show a new toast
-  const toast = useCallback(
-    ({ title, description, type = "info" }) => {
-      setToasts((prev) => {
-        // Remove oldest toast if limit exceeded
-        if (prev.length >= TOAST_LIMIT) {
-          const [oldest] = prev;
-          removeToast(oldest.id);
-          return [...prev.slice(1), { id: uuidv4(), title, description, type }];
-        }
-        return [...prev, { id: uuidv4(), title, description, type }];
-      });
-    },
-    [removeToast]
-  );
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
   return {
-    toasts,
     toast,
+    toasts,
     removeToast,
-    addToRemoveQueue,
   };
 };

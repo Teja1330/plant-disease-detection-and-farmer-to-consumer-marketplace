@@ -21,16 +21,11 @@ import {
   Zap 
 } from "lucide-react";
 
-// Simple toast fallback
-const useToast = () => {
-  const toast = ({ title, description }) => {
-    alert(`${title}\n${description}`);
-  };
-  return { toast };
-};
+// Import the toast hook properly
+import { useToast } from "@/hooks/use-toast";
 
 const Detection = () => {
-  const { toast } = useToast();
+  const { toast } = useToast(); // ✅ Fixed: Properly using the hook
 
   const [history, setHistory] = useState([]);
   const [image, setImage] = useState(null);
@@ -104,7 +99,7 @@ const Detection = () => {
 
             {/* Detection Tab */}
             <TabsContent value="detection">
-              <Card className="max-w-2xl mx-auto shadow-large bg-gradient-card">
+              <Card className="max-w-2xl mx-auto shadow-large bg-white border">
                 <CardHeader>
                   <CardTitle className="text-2xl">Upload Leaf Image</CardTitle>
                 </CardHeader>
@@ -112,16 +107,16 @@ const Detection = () => {
                   <Input type="file" accept="image/*" onChange={handleUpload} />
                   {image && (
                     <div className="mt-4">
-                      <img src={image} alt="Uploaded Leaf" className="w-full max-h-64 object-contain rounded-lg" />
+                      <img src={image} alt="Uploaded Leaf" className="w-full max-h-64 object-contain rounded-lg border" />
                     </div>
                   )}
-                  <Button onClick={handleDetect} disabled={!image}>
+                  <Button onClick={handleDetect} disabled={!image} className="bg-blue-600 hover:bg-blue-700">
                     Detect Disease
                   </Button>
                   {result && (
-                    <div className="mt-4 p-4 bg-surface rounded-lg flex items-center space-x-2">
+                    <div className="mt-4 p-4 bg-green-50 rounded-lg flex items-center space-x-2 border border-green-200">
                       <Leaf className="h-6 w-6 text-green-600" />
-                      <span className="text-lg font-semibold">Result: {result}</span>
+                      <span className="text-lg font-semibold text-green-800">Result: {result}</span>
                     </div>
                   )}
                 </CardContent>
@@ -131,31 +126,32 @@ const Detection = () => {
             {/* History Tab */}
             <TabsContent value="history">
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {history.length === 0 && (
-                  <p className="text-muted-foreground">No detections yet.</p>
+                {history.length === 0 ? (
+                  <p className="text-muted-foreground col-span-full text-center py-8">No detections yet.</p>
+                ) : (
+                  history.map((item, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 50 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6, delay: index * 0.1 }}
+                    >
+                      <Card className="hover:shadow-medium transition-all duration-300 bg-white border">
+                        <CardContent className="p-0">
+                          <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center relative">
+                            <img src={item.image} alt="Leaf" className="object-contain w-full h-full rounded-t-lg" />
+                            <Badge className="absolute top-2 left-2 bg-blue-600 text-white text-xs">
+                              {item.result}
+                            </Badge>
+                          </div>
+                          <div className="p-4 space-y-2">
+                            <p className="text-sm text-muted-foreground">Date: {item.date}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))
                 )}
-                {history.map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                  >
-                    <Card className="hover:shadow-medium transition-all duration-300 bg-gradient-card">
-                      <CardContent className="p-0">
-                        <div className="aspect-square bg-surface-soft rounded-t-lg flex items-center justify-center relative">
-                          <img src={item.image} alt="Leaf" className="object-contain w-full h-full rounded-t-lg" />
-                          <Badge className="absolute top-2 left-2 bg-primary text-white text-xs">
-                            {item.result}
-                          </Badge>
-                        </div>
-                        <div className="p-4 space-y-2">
-                          <p className="text-sm text-muted-foreground">Date: {item.date}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
               </div>
             </TabsContent>
           </Tabs>

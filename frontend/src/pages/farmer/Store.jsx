@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea"; // ✅ Added missing import
 import { 
   Plus, 
   Leaf, 
@@ -12,9 +13,10 @@ import {
   Package
 } from "lucide-react";
 
+import { useToast } from "@/hooks/use-toast"; // ✅ Added toast import
+
 const Store = () => {
-  // Simple toast fallback
-  const toast = ({ title, description }) => alert(`${title}\n${description}`);
+  const { toast } = useToast(); // ✅ Using toast hook properly
 
   const [products, setProducts] = useState([
     {
@@ -130,7 +132,7 @@ const Store = () => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`h-4 w-4 ${i < rating ? 'fill-secondary text-secondary' : 'text-muted-foreground'}`}
+        className={`h-4 w-4 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
       />
     ));
   };
@@ -179,17 +181,17 @@ const Store = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: index * 0.1 }}
                   >
-                    <Card className="hover:shadow-medium transition-all duration-300 bg-gradient-card">
+                    <Card className="hover:shadow-medium transition-all duration-300 bg-white border">
                       <CardContent className="p-0">
-                        <div className="aspect-square bg-surface-soft rounded-t-lg flex items-center justify-center relative">
-                          <Leaf className="h-12 w-12 text-primary/30" />
+                        <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center relative">
+                          <Leaf className="h-12 w-12 text-green-300" />
                           {product.organic && (
-                            <Badge className="absolute top-2 left-2 bg-success text-white text-xs">
+                            <Badge className="absolute top-2 left-2 bg-green-500 text-white text-xs">
                               Organic
                             </Badge>
                           )}
                           {product.stock === 0 && (
-                            <Badge className="absolute top-2 right-2 bg-destructive text-white text-xs">
+                            <Badge className="absolute top-2 right-2 bg-red-500 text-white text-xs">
                               Out of Stock
                             </Badge>
                           )}
@@ -205,7 +207,7 @@ const Store = () => {
                             <span className="text-xs text-muted-foreground">({product.sales} sold)</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-lg font-bold text-primary">
+                            <span className="text-lg font-bold text-green-600">
                               ${product.price.toFixed(2)}/{product.unit}
                             </span>
                             <span className="text-sm text-muted-foreground">Stock: {product.stock}</span>
@@ -213,7 +215,7 @@ const Store = () => {
                           <Button
                             type="button"
                             onClick={() => handleDeleteProduct(product.id)}
-                            className="mt-2 w-full bg-destructive text-white"
+                            className="mt-2 w-full bg-red-600 hover:bg-red-700 text-white"
                           >
                             Delete
                           </Button>
@@ -232,7 +234,7 @@ const Store = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
               >
-                <Card className="max-w-2xl mx-auto shadow-large bg-gradient-card">
+                <Card className="max-w-2xl mx-auto shadow-large bg-white border">
                   <CardHeader>
                     <CardTitle className="text-2xl">Add New Product</CardTitle>
                   </CardHeader>
@@ -272,7 +274,9 @@ const Store = () => {
                         onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
                         required
                       />
-                      <Button type="submit">Add Product</Button>
+                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                        Add Product
+                      </Button>
                     </form>
                   </CardContent>
                 </Card>
