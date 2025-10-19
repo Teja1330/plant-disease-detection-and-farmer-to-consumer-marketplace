@@ -10,7 +10,7 @@ import {
   Shield,
   TrendingUp,
 } from "lucide-react";
-import heroImage from "../assets/hero-agriculture.jpg";
+import heroImage from "/assets/hero-agriculture.jpg";
 
 const Home = () => {
   const { user } = useUser();

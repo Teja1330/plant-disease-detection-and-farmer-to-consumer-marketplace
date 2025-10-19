@@ -1,11 +1,9 @@
 ﻿import React from "react";
 
-export const Separator = ({ className, orientation = "horizontal", ...props }) => {
+export const Separator = ({ className = "", orientation = "horizontal", ...props }) => {
   return (
     <div
-      className={`bg-border ${
-        orientation === "horizontal" ? "h-[1px] w-full" : "h-full w-[1px]"
-      } ${className}`}
+      className={`bg-border ${orientation === "horizontal" ? "h-[1px] w-full" : "h-full w-[1px]"} ${className}`}
       {...props}
     />
   );

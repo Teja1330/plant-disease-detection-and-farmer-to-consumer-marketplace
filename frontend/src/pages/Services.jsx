@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ShoppingBag, Camera, Handshake, Shield, TrendingUp, Users } from "lucide-react";
 
-import marketplaceImage from "../assets/marketplace-service.jpg";
-import detectionImage from "../assets/disease-detection-service.jpg";
-import connectionImage from "../assets/connection-service.jpg";
+import marketplaceImage from "/assets/marketplace-service.jpg";
+import detectionImage from "/assets/disease-detection-service.jpg";
+import connectionImage from "/assets/connection-service.jpg";
 
 const Services = () => {
   const mainServices = [
