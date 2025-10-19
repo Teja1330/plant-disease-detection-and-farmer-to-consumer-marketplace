@@ -23,17 +23,11 @@ const Signup = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Ensure CSRF token is available
+  // Remove CSRF token check since it's not needed with JWT
   useEffect(() => {
-    const ensureCSRFToken = async () => {
-      try {
-        await API.get("/login");
-        console.log("CSRF token ready for signup");
-      } catch (error) {
-        console.error("Failed to get CSRF token:", error);
-      }
-    };
-    ensureCSRFToken();
+    // Clear any existing tokens when arriving at signup page
+    localStorage.removeItem('auth_token');
+    console.log("Cleared existing tokens for fresh signup");
   }, []);
 
   const handleInputChange = (e) => {
@@ -56,26 +50,66 @@ const Signup = () => {
         variant: "destructive",
       });
 
+    // Password strength validation
+    if (formData.password.length < 6) {
+      return toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+    }
+
     try {
       setIsLoading(true);
-      await API.post("/register", {
+      console.log("Attempting signup with:", { 
+        name: formData.name,
+        email: formData.email,
+        role: selectedRole 
+      });
+
+      const response = await API.post("/register", {
         name: formData.name,
         email: formData.email,
         password: formData.password,
         role: selectedRole,
       });
 
+      console.log("Signup response:", response.data);
+
       toast({
-        title: "Account created!",
+        title: "Account created successfully! 🎉",
         description: "You can now log in to your account.",
       });
 
-      navigate("/login");
+      // Redirect to login page after successful signup
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+
     } catch (error) {
       console.error("Signup error:", error);
+      
+      let errorMessage = "Signup failed. Please try again.";
+      
+      if (error.response) {
+        if (error.response.status === 400) {
+          if (error.response.data.email) {
+            errorMessage = "This email is already registered. Please use a different email or login.";
+          } else if (error.response.data.password) {
+            errorMessage = error.response.data.password[0];
+          } else {
+            errorMessage = error.response.data.detail || "Please check your information and try again.";
+          }
+        } else if (error.response.status === 500) {
+          errorMessage = "Server error. Please try again later.";
+        }
+      } else if (error.request) {
+        errorMessage = "No response from server. Please check if the backend is running.";
+      }
+
       toast({
         title: "Signup failed",
-        description: error.response?.data?.detail || error.response?.data || "Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -86,7 +120,7 @@ const Signup = () => {
   // Role selection screen
   if (!selectedRole) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/5 py-12 px-4">
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
@@ -94,6 +128,14 @@ const Signup = () => {
           className="w-full max-w-md space-y-8"
         >
           <div className="text-center space-y-4">
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-lg mb-4"
+            >
+              <User className="h-8 w-8 text-primary-foreground" />
+            </motion.div>
             <h1 className="text-3xl font-bold text-foreground">Join AgriCare</h1>
             <p className="text-muted-foreground">
               Choose your account type to get started
@@ -102,13 +144,19 @@ const Signup = () => {
 
           <div className="grid gap-4">
             {/* Farmer */}
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <motion.div 
+              whileHover={{ scale: 1.02 }} 
+              whileTap={{ scale: 0.98 }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
               <Card
-                className="cursor-pointer border-2 hover:border-primary transition-all duration-200 hover:shadow-medium"
+                className="cursor-pointer border-2 border-border hover:border-primary transition-all duration-200 hover:shadow-lg bg-card"
                 onClick={() => setSelectedRole("farmer")}
               >
                 <CardContent className="p-8 text-center space-y-4">
-                  <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center shadow-soft">
+                  <div className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-md">
                     <Tractor className="h-8 w-8 text-white" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground">I'm a Farmer</h3>
@@ -120,13 +168,19 @@ const Signup = () => {
             </motion.div>
 
             {/* Customer */}
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <motion.div 
+              whileHover={{ scale: 1.02 }} 
+              whileTap={{ scale: 0.98 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
               <Card
-                className="cursor-pointer border-2 hover:border-primary transition-all duration-200 hover:shadow-medium"
+                className="cursor-pointer border-2 border-border hover:border-primary transition-all duration-200 hover:shadow-lg bg-card"
                 onClick={() => setSelectedRole("customer")}
               >
                 <CardContent className="p-8 text-center space-y-4">
-                  <div className="mx-auto w-16 h-16 bg-gradient-secondary rounded-full flex items-center justify-center shadow-soft">
+                  <div className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-md">
                     <User className="h-8 w-8 text-white" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground">I'm a Customer</h3>
@@ -137,6 +191,27 @@ const Signup = () => {
               </Card>
             </motion.div>
           </div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="text-center"
+          >
+            <p className="text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <a 
+                href="/login" 
+                className="text-primary hover:underline font-medium"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/login");
+                }}
+              >
+                Sign in
+              </a>
+            </p>
+          </motion.div>
         </motion.div>
       </div>
     );
@@ -144,91 +219,192 @@ const Signup = () => {
 
   // Signup form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/5 py-12 px-4">
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
         className="w-full max-w-md"
       >
-        <Card className="shadow-large">
-          <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center shadow-soft">
+        <Card className="shadow-xl border-border/50 backdrop-blur-sm bg-card/95">
+          <CardHeader className="text-center space-y-4 pb-6">
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-lg"
+            >
               {selectedRole === "farmer" ? (
                 <Tractor className="h-8 w-8 text-white" />
               ) : (
                 <User className="h-8 w-8 text-white" />
               )}
-            </div>
-            <CardTitle className="text-2xl">
+            </motion.div>
+            <CardTitle className="text-2xl font-bold">
               Sign up as {selectedRole === "farmer" ? "Farmer" : "Customer"}
             </CardTitle>
+            <p className="text-muted-foreground">
+              Create your account to get started
+            </p>
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <Button variant="outline" onClick={() => setSelectedRole(null)} className="w-full">
+            <Button 
+              variant="outline" 
+              onClick={() => setSelectedRole(null)} 
+              className="w-full border-border hover:border-primary"
+              disabled={isLoading}
+            >
               ← Change Account Type
             </Button>
 
             <form onSubmit={handleSignup} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input name="name" value={formData.name} onChange={handleInputChange} required />
-              </div>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="space-y-2"
+              >
+                <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
+                <Input 
+                  id="name"
+                  name="name" 
+                  value={formData.name} 
+                  onChange={handleInputChange} 
+                  placeholder="Enter your full name"
+                  required 
+                  disabled={isLoading}
+                  className="bg-background/50 border-border/70 focus:border-primary"
+                />
+              </motion.div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input name="email" type="email" value={formData.email} onChange={handleInputChange} required />
-              </div>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="space-y-2"
+              >
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                <Input 
+                  id="email"
+                  name="email" 
+                  type="email" 
+                  value={formData.email} 
+                  onChange={handleInputChange} 
+                  placeholder="Enter your email address"
+                  required 
+                  disabled={isLoading}
+                  className="bg-background/50 border-border/70 focus:border-primary"
+                />
+              </motion.div>
 
-              <div className="space-y-2">
-                <Label>Password</Label>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="space-y-2"
+              >
+                <Label className="text-sm font-medium">Password</Label>
                 <div className="relative">
                   <Input
                     name="password"
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={handleInputChange}
+                    placeholder="Create a password"
                     required
+                    disabled={isLoading}
+                    className="bg-background/50 border-border/70 focus:border-primary pr-10"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
-              </div>
+                <p className="text-xs text-muted-foreground">
+                  Password must be at least 6 characters long
+                </p>
+              </motion.div>
 
-              <div className="space-y-2">
-                <Label>Confirm Password</Label>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className="space-y-2"
+              >
+                <Label className="text-sm font-medium">Confirm Password</Label>
                 <div className="relative">
                   <Input
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
+                    placeholder="Confirm your password"
                     required
+                    disabled={isLoading}
+                    className="bg-background/50 border-border/70 focus:border-primary pr-10"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={isLoading}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
-              </div>
+              </motion.div>
 
-              <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90" disabled={isLoading}>
-                {isLoading ? "Creating Account..." : "Create Account"}
-              </Button>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+              >
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200 font-semibold"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent"></div>
+                      <span>Creating Account...</span>
+                    </div>
+                  ) : (
+                    "Create Account"
+                  )}
+                </Button>
+              </motion.div>
             </form>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.7 }}
+              className="text-center"
+            >
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <a 
+                  href="/login" 
+                  className="text-primary hover:underline font-medium"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate("/login");
+                  }}
+                >
+                  Sign in
+                </a>
+              </p>
+            </motion.div>
           </CardContent>
         </Card>
       </motion.div>

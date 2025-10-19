@@ -56,32 +56,55 @@ const CustomerHome = () => {
     }
   ];
 
+  // Safe cart count function
+  const getCartCount = () => {
+    try {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      // Ensure cart is an array and count items
+      return Array.isArray(cart) ? cart.length : 0;
+    } catch (error) {
+      console.error('Error reading cart from localStorage:', error);
+      return 0;
+    }
+  };
+
   const handleAddToCart = (product) => {
-    // Get existing cart from localStorage
-    const existingCart = JSON.parse(localStorage.getItem('cart')) || [];
-    
-    // Check if product already exists in cart
-    const existingItem = existingCart.find(item => item.id === product.id);
-    
-    if (existingItem) {
-      // Update quantity if item exists
-      existingItem.quantity += 1;
-    } else {
-      // Add new item to cart
-      existingCart.push({
-        ...product,
-        quantity: 1
+    try {
+      // Get existing cart from localStorage
+      const existingCart = JSON.parse(localStorage.getItem('cart')) || [];
+      
+      // Ensure existingCart is an array
+      const cart = Array.isArray(existingCart) ? existingCart : [];
+      
+      // Check if product already exists in cart
+      const existingItem = cart.find(item => item.id === product.id);
+      
+      if (existingItem) {
+        // Update quantity if item exists
+        existingItem.quantity += 1;
+      } else {
+        // Add new item to cart
+        cart.push({
+          ...product,
+          quantity: 1
+        });
+      }
+      
+      // Save updated cart to localStorage
+      localStorage.setItem('cart', JSON.stringify(cart));
+      
+      toast({
+        title: "Added to cart! 🛒",
+        description: `${product.name} has been added to your cart.`,
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
       });
     }
-    
-    // Save updated cart to localStorage
-    localStorage.setItem('cart', JSON.stringify(existingCart));
-    
-    toast({
-      title: "Added to cart! 🛒",
-      description: `${product.name} has been added to your cart.`,
-      variant: "success"
-    });
   };
 
   const renderStars = (rating) => {
@@ -129,7 +152,6 @@ const CustomerHome = () => {
               onClick={() => toast({
                 title: "Search feature",
                 description: "Search functionality will be implemented soon!",
-                variant: "default"
               })}
             >
               Search
@@ -164,7 +186,7 @@ const CustomerHome = () => {
                 </div>
                 <h3 className="font-semibold text-gray-900">My Cart</h3>
                 <p className="text-sm text-gray-600">
-                  {JSON.parse(localStorage.getItem('cart') || '[]').length} items
+                  {getCartCount()} items
                 </p>
               </CardContent>
             </Card>
@@ -187,7 +209,6 @@ const CustomerHome = () => {
             onClick={() => toast({
               title: "Coming Soon!",
               description: "Nearby farmers feature will be available soon.",
-              variant: "default"
             })}
           >
             <CardContent className="p-6 text-center space-y-2">

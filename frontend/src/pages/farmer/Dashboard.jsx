@@ -98,13 +98,13 @@ const Dashboard = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return 'bg-success text-white';
+        return 'bg-green-100 text-green-800';
       case 'processing':
-        return 'bg-sky-blue text-white';
+        return 'bg-blue-100 text-blue-800';
       case 'pending':
-        return 'bg-secondary text-white';
+        return 'bg-yellow-100 text-yellow-800';
       default:
-        return 'bg-muted text-muted-foreground';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -126,7 +126,7 @@ const Dashboard = () => {
           </div>
           
           <Link to="/farmer/store">
-            <Button className="bg-gradient-primary hover:opacity-90 shadow-medium">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md">
               <Plus className="h-4 w-4 mr-2" />
               Add Product
             </Button>
@@ -149,15 +149,15 @@ const Dashboard = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <Card className="bg-gradient-card hover:shadow-medium transition-all duration-300">
+                <Card className="bg-card hover:shadow-md transition-all duration-300 border">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-muted-foreground text-sm font-medium">{stat.title}</p>
                         <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                        <p className="text-sm text-success">{stat.change}</p>
+                        <p className="text-sm text-green-600">{stat.change}</p>
                       </div>
-                      <div className={`w-12 h-12 bg-gradient-${stat.color} rounded-full flex items-center justify-center shadow-soft`}>
+                      <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-sm">
                         <Icon className="h-6 w-6 text-white" />
                       </div>
                     </div>
@@ -176,7 +176,7 @@ const Dashboard = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="lg:col-span-2"
           >
-            <Card className="shadow-medium bg-gradient-card">
+            <Card className="shadow-md bg-card border">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-xl">Recent Orders</CardTitle>
                 <Link to="/farmer/orders">
@@ -193,7 +193,7 @@ const Dashboard = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4, delay: index * 0.1 }}
-                    className="flex items-center justify-between p-4 bg-surface rounded-lg border border-border/50"
+                    className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center space-x-3">
@@ -221,7 +221,7 @@ const Dashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
           >
-            <Card className="shadow-medium bg-gradient-card">
+            <Card className="shadow-md bg-card border">
               <CardHeader>
                 <CardTitle className="text-xl">Top Products</CardTitle>
               </CardHeader>
@@ -232,7 +232,7 @@ const Dashboard = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4, delay: index * 0.1 }}
-                    className="p-4 bg-surface rounded-lg border border-border/50"
+                    className="p-4 bg-muted rounded-lg border border-border"
                   >
                     <div className="space-y-2">
                       <h4 className="font-semibold text-foreground">{product.name}</h4>
@@ -241,7 +241,7 @@ const Dashboard = () => {
                         <span className="font-medium text-primary">{product.revenue}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <Star className="h-4 w-4 fill-secondary text-secondary" />
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                         <span className="text-sm font-medium">{product.rating}</span>
                       </div>
                     </div>
@@ -259,11 +259,11 @@ const Dashboard = () => {
           transition={{ duration: 0.8 }}
           className="mt-8"
         >
-          <Card className="bg-gradient-hero text-white shadow-large">
+          <Card className="bg-primary text-primary-foreground shadow-lg">
             <CardContent className="p-8">
               <div className="text-center space-y-6">
                 <h2 className="text-2xl font-bold">Grow Your Business</h2>
-                <p className="text-white/90 max-w-2xl mx-auto">
+                <p className="text-primary-foreground/90 max-w-2xl mx-auto">
                   Take advantage of our tools to increase your sales and reach more customers.
                 </p>
                 
@@ -308,4 +308,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
