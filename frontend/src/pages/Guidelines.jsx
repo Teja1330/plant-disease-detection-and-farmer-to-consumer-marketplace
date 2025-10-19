@@ -8,7 +8,6 @@ import {
   Leaf, 
   Shield, 
   Camera, 
-  Package,
   Star,
   AlertTriangle,
   Info
@@ -19,7 +18,6 @@ const Guidelines = () => {
     {
       category: "Product Quality",
       icon: Leaf,
-      color: "primary",
       guidelines: [
         { title: "Fresh Produce Standards", description: "Ensure all produce is harvested at optimal ripeness and handled with care.", type: "best-practice" },
         { title: "Organic Certification", description: "Maintain proper documentation for organic products and follow certification requirements.", type: "requirement" },
@@ -30,7 +28,6 @@ const Guidelines = () => {
     {
       category: "Photography & Listing",
       icon: Camera,
-      color: "secondary",
       guidelines: [
         { title: "High-Quality Images", description: "Upload clear, well-lit photos that accurately represent your products.", type: "requirement" },
         { title: "Multiple Angles", description: "Provide 3-4 images showing different angles and details of your produce.", type: "best-practice" },
@@ -41,7 +38,6 @@ const Guidelines = () => {
     {
       category: "Customer Service",
       icon: Users,
-      color: "accent",
       guidelines: [
         { title: "Response Time", description: "Respond to customer inquiries within 24 hours.", type: "requirement" },
         { title: "Order Fulfillment", description: "Process and prepare orders within the timeframe specified in your listing.", type: "requirement" },
@@ -55,7 +51,6 @@ const Guidelines = () => {
     {
       category: "Ordering Best Practices",
       icon: Leaf,
-      color: "primary",
       guidelines: [
         { title: "Read Product Descriptions", description: "Carefully review product details, including variety, quantity, and harvest information.", type: "best-practice" },
         { title: "Check Delivery Areas", description: "Ensure the farmer delivers to your location before placing an order.", type: "requirement" },
@@ -66,7 +61,6 @@ const Guidelines = () => {
     {
       category: "Quality & Reviews",
       icon: Star,
-      color: "secondary",
       guidelines: [
         { title: "Fair Reviews", description: "Leave honest, constructive reviews based on product quality and service.", type: "best-practice" },
         { title: "Photo Reviews", description: "Include photos in your reviews to help other customers make informed decisions.", type: "best-practice" },
@@ -77,7 +71,6 @@ const Guidelines = () => {
     {
       category: "Community Support",
       icon: Shield,
-      color: "accent",
       guidelines: [
         { title: "Support Local Farmers", description: "Prioritize local and sustainable farming practices when making purchase decisions.", type: "best-practice" },
         { title: "Reduce Food Waste", description: "Order quantities you can consume and store products properly.", type: "best-practice" },
@@ -89,24 +82,24 @@ const Guidelines = () => {
 
   const getTypeIcon = (type) => {
     switch (type) {
-      case 'requirement': return <AlertTriangle className="h-4 w-4" />;
-      case 'best-practice': return <CheckCircle className="h-4 w-4" />;
-      case 'info': return <Info className="h-4 w-4" />;
-      default: return <CheckCircle className="h-4 w-4" />;
+      case 'requirement': return <AlertTriangle className="h-4 w-4 text-destructive" />;
+      case 'best-practice': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'info': return <Info className="h-4 w-4 text-blue-500" />;
+      default: return <CheckCircle className="h-4 w-4 text-green-600" />;
     }
   };
 
   const getTypeBadge = (type) => {
     switch (type) {
       case 'requirement': return <Badge variant="destructive" className="text-xs">Required</Badge>;
-      case 'best-practice': return <Badge className="bg-success text-white text-xs">Best Practice</Badge>;
+      case 'best-practice': return <Badge className="bg-green-600 text-white text-xs">Best Practice</Badge>;
       case 'info': return <Badge variant="secondary" className="text-xs">Info</Badge>;
-      default: return <Badge className="bg-success text-white text-xs">Best Practice</Badge>;
+      default: return <Badge className="bg-green-600 text-white text-xs">Best Practice</Badge>;
     }
   };
 
   return (
-    <div className="min-h-screen py-20">
+    <div className="min-h-screen py-20 bg-background">
       <div className="container mx-auto px-4">
         {/* Header */}
         <motion.div
@@ -115,10 +108,10 @@ const Guidelines = () => {
           transition={{ duration: 0.8 }}
           className="text-center space-y-6 mb-16"
         >
-          <h1 className="text-5xl font-bold text-foreground">
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground">
             Community <span className="text-primary">Guidelines</span>
           </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Best practices and requirements to ensure a positive experience for everyone in the AgriCare community.
           </p>
         </motion.div>
@@ -130,13 +123,13 @@ const Guidelines = () => {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <Tabs defaultValue="farmers" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-12">
-              <TabsTrigger value="farmers" className="text-lg">For Farmers</TabsTrigger>
-              <TabsTrigger value="customers" className="text-lg">For Customers</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-8 md:mb-12">
+              <TabsTrigger value="farmers" className="text-base md:text-lg">For Farmers</TabsTrigger>
+              <TabsTrigger value="customers" className="text-base md:text-lg">For Customers</TabsTrigger>
             </TabsList>
 
             {/* Farmer Guidelines */}
-            <TabsContent value="farmers" className="space-y-8">
+            <TabsContent value="farmers" className="space-y-6 md:space-y-8">
               {farmerGuidelines.map((section, sectionIndex) => {
                 const Icon = section.icon;
                 return (
@@ -146,11 +139,11 @@ const Guidelines = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: sectionIndex * 0.1 }}
                   >
-                    <Card className="bg-gradient-card shadow-medium">
+                    <Card className="bg-card shadow-medium border">
                       <CardHeader>
-                        <CardTitle className="flex items-center space-x-3 text-2xl">
-                          <div className={`w-10 h-10 bg-gradient-${section.color} rounded-full flex items-center justify-center shadow-soft`}>
-                            <Icon className="h-5 w-5 text-white" />
+                        <CardTitle className="flex items-center space-x-3 text-xl md:text-2xl">
+                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-soft">
+                            <Icon className="h-5 w-5 text-primary-foreground" />
                           </div>
                           <span>{section.category}</span>
                         </CardTitle>
@@ -163,11 +156,11 @@ const Guidelines = () => {
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ duration: 0.4, delay: index * 0.05 }}
-                              className="flex items-start space-x-3 p-4 bg-surface rounded-lg border border-border/50"
+                              className="flex items-start space-x-3 p-4 bg-muted rounded-lg border border-border"
                             >
                               <div className="mt-1">{getTypeIcon(guideline.type)}</div>
                               <div className="flex-1 space-y-2">
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                   <h4 className="font-semibold text-foreground">{guideline.title}</h4>
                                   {getTypeBadge(guideline.type)}
                                 </div>
@@ -184,7 +177,7 @@ const Guidelines = () => {
             </TabsContent>
 
             {/* Customer Guidelines */}
-            <TabsContent value="customers" className="space-y-8">
+            <TabsContent value="customers" className="space-y-6 md:space-y-8">
               {customerGuidelines.map((section, sectionIndex) => {
                 const Icon = section.icon;
                 return (
@@ -194,11 +187,11 @@ const Guidelines = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: sectionIndex * 0.1 }}
                   >
-                    <Card className="bg-gradient-card shadow-medium">
+                    <Card className="bg-card shadow-medium border">
                       <CardHeader>
-                        <CardTitle className="flex items-center space-x-3 text-2xl">
-                          <div className={`w-10 h-10 bg-gradient-${section.color} rounded-full flex items-center justify-center shadow-soft`}>
-                            <Icon className="h-5 w-5 text-white" />
+                        <CardTitle className="flex items-center space-x-3 text-xl md:text-2xl">
+                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-soft">
+                            <Icon className="h-5 w-5 text-primary-foreground" />
                           </div>
                           <span>{section.category}</span>
                         </CardTitle>
@@ -211,11 +204,11 @@ const Guidelines = () => {
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ duration: 0.4, delay: index * 0.05 }}
-                              className="flex items-start space-x-3 p-4 bg-surface rounded-lg border border-border/50"
+                              className="flex items-start space-x-3 p-4 bg-muted rounded-lg border border-border"
                             >
                               <div className="mt-1">{getTypeIcon(guideline.type)}</div>
                               <div className="flex-1 space-y-2">
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                   <h4 className="font-semibold text-foreground">{guideline.title}</h4>
                                   {getTypeBadge(guideline.type)}
                                 </div>
@@ -238,14 +231,14 @@ const Guidelines = () => {
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="bg-gradient-hero text-white rounded-2xl p-12 text-center mt-20"
+          className="bg-primary text-primary-foreground rounded-2xl p-8 md:p-12 text-center mt-16 md:mt-20"
         >
-          <h2 className="text-3xl font-bold mb-4">Building a Better Community Together</h2>
-          <p className="text-lg text-white/90 mb-8 max-w-3xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Building a Better Community Together</h2>
+          <p className="text-base md:text-lg text-primary-foreground/90 mb-6 md:mb-8 max-w-3xl mx-auto">
             These guidelines help ensure that AgriCare remains a trusted, supportive platform where 
             farmers can thrive and customers can access quality, fresh produce with confidence.
           </p>
-          <div className="flex items-center justify-center space-x-8 text-white/80">
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-8 text-primary-foreground/80">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5" />
               <span>Quality Assured</span>
@@ -266,4 +259,3 @@ const Guidelines = () => {
 };
 
 export default Guidelines;
-
