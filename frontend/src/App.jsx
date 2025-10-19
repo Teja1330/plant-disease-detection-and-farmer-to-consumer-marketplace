@@ -20,6 +20,7 @@ import Guidelines from "./pages/Guidelines";
 import Signup from "./pages/auth/Signup";
 import Login from "./pages/auth/Login";
 import NotFound from "./pages/NotFound";
+import AccountChoice from "./pages/AccountChoice";
 
 // User Context
 const UserContext = createContext(null);
@@ -38,7 +39,13 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 // Main App Content Component
 const AppContent = () => {
   const { toast } = useToast();
-  const [user, setUser] = useState({ role: null, name: null, email: null });
+  const [user, setUser] = useState({
+    role: null,
+    name: null,
+    email: null,
+    has_farmer: false,
+    has_customer: false
+  });
   const [loading, setLoading] = useState(true);
 
   const logout = async () => {
@@ -57,33 +64,46 @@ const AppContent = () => {
         variant: "destructive"
       });
     }
-    setUser({ role: null, name: null, email: null });
+    localStorage.removeItem('auth_token');
+    setUser({
+      role: null,
+      name: null,
+      email: null,
+      has_farmer: false,
+      has_customer: false
+    });
   };
 
   // Fetch user on page load
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
         const res = await API.get("/user");
+        console.log("User data from API:", res.data); // Debug log
+
         setUser({
           email: res.data.email,
           name: res.data.name,
-          role: res.data.role,
+          role: res.data.role || (res.data.has_farmer ? 'farmer' : 'customer'),
+          has_farmer: res.data.has_farmer || false,
+          has_customer: res.data.has_customer || false
         });
       } catch (err) {
-        console.log("Not logged in yet");
+        console.log("Not logged in or token expired");
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('temp_password');
       } finally {
         setLoading(false);
       }
     };
-    
-    // Check if we have a token before making the request
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
+
+    fetchUser();
   }, []);
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
@@ -103,18 +123,29 @@ const AppContent = () => {
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />
 
+              {/* Account Choice Route */}
+              <Route path="/account-choice" element={<AccountChoice />} />
+
               {/* Farmer Routes */}
-              <Route path="/farmer/*" element={<ProtectedRoute allowedRoles={['farmer']}><FarmerLayout /></ProtectedRoute>} />
+              <Route path="/farmer/*" element={
+                <ProtectedRoute allowedRoles={['farmer', 'multi']}>
+                  <FarmerLayout />
+                </ProtectedRoute>
+              } />
 
               {/* Customer Routes */}
-              <Route path="/customer/*" element={<ProtectedRoute allowedRoles={['customer']}><CustomerLayout /></ProtectedRoute>} />
+              <Route path="/customer/*" element={
+                <ProtectedRoute allowedRoles={['customer', 'multi']}>
+                  <CustomerLayout />
+                </ProtectedRoute>
+              } />
 
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
           <Footer />
-          
+
           {/* Toast Container */}
           <Toast />
         </div>

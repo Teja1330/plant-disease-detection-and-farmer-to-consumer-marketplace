@@ -21,7 +21,7 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast({
         title: "Missing fields",
@@ -35,46 +35,55 @@ const Login = () => {
 
     try {
       console.log("Attempting login with:", { email, password });
-      
+
       // 1️⃣ Login - get token from response
-      const loginResponse = await API.post("/login", { 
-        email: email.trim(), 
-        password: password 
+      const loginResponse = await API.post("/login", {
+        email: email.trim(),
+        password: password
       });
-      
+
       console.log("Login response:", loginResponse.data);
-      
-      const { token, user: userData } = loginResponse.data;
-      
-      // 2️⃣ Store token in localStorage for persistence
-      if (token) {
-        localStorage.setItem('auth_token', token);
-        console.log("✅ Token stored in localStorage");
+
+      // Check if user data exists
+      if (!loginResponse.data.user) {
+        throw new Error("User data not received from server");
       }
-      
-      // 3️⃣ Set user in context
+
+      const { token, user: userData } = loginResponse.data;
+
+      // 2️⃣ Store token in localStorage for persistence
+      localStorage.setItem('auth_token', token); // ✅ Fixed variable name
+      localStorage.setItem('temp_password', password);
+
+      // Update user context with ALL account information
       setUser({
         email: userData.email,
         name: userData.name,
         role: userData.role,
+        has_farmer: userData.has_farmer || false,
+        has_customer: userData.has_customer || false
       });
+
+      // Then redirect based on account types
+      if (userData.has_farmer && userData.has_customer) {
+        navigate("/account-choice");
+      } else if (userData.has_farmer) {
+        navigate("/farmer");
+      } else {
+        navigate("/customer");
+      }
 
       toast({
         title: "Login successful!",
         description: `Welcome back, ${userData.name}!`,
       });
+      
 
-      // 4️⃣ Redirect based on role
-      if (userData.role === "farmer") {
-        navigate("/farmer");
-      } else {
-        navigate("/customer");
-      }
     } catch (err) {
       console.error("Login error details:", err);
-      
+
       let errorMessage = "Login failed. Please try again.";
-      
+
       if (err.response) {
         if (err.response.status === 403) {
           errorMessage = "Access forbidden. Please check your credentials.";
@@ -85,6 +94,8 @@ const Login = () => {
         }
       } else if (err.request) {
         errorMessage = "No response from server. Please check if the backend is running.";
+      } else if (err.message) {
+        errorMessage = err.message;
       }
 
       toast({
@@ -122,7 +133,7 @@ const Login = () => {
                 Enter your credentials to access your account
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent className="space-y-6">
               <form onSubmit={handleLogin} className="space-y-5">
                 <motion.div
@@ -150,7 +161,7 @@ const Login = () => {
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   </div>
                 </motion.div>
-                
+
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -194,8 +205,8 @@ const Login = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
                 >
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200 font-semibold"
                     disabled={isLoading}
                   >

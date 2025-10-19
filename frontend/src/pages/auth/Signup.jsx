@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Tractor, Eye, EyeOff } from "lucide-react";
+import { User, Tractor, Eye, EyeOff, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import API from "../../api";
 
@@ -20,95 +20,132 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false,
+  });
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Remove CSRF token check since it's not needed with JWT
   useEffect(() => {
-    // Clear any existing tokens when arriving at signup page
     localStorage.removeItem('auth_token');
-    console.log("Cleared existing tokens for fresh signup");
   }, []);
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    if (name === 'password') {
+      setPasswordStrength({
+        length: value.length >= 8,
+        uppercase: /[A-Z]/.test(value),
+        lowercase: /[a-z]/.test(value),
+        number: /[0-9]/.test(value),
+        special: /[!@#$%^&*(),.?":{}|<>]/.test(value),
+      });
+    }
+  };
+
+  const validateForm = () => {
+    if (!formData.name.trim() || formData.name.trim().length < 2) {
+      toast({
+        title: "Invalid Name",
+        description: "Name must be at least 2 characters long.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!passwordStrength.length || !passwordStrength.uppercase || 
+        !passwordStrength.lowercase || !passwordStrength.number || !passwordStrength.special) {
+      toast({
+        title: "Weak Password",
+        description: "Please ensure your password meets all requirements.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Passwords Don't Match",
+        description: "Please make sure your passwords match.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
 
-    if (!selectedRole)
-      return toast({
-        title: "Select a role",
+    if (!selectedRole) {
+      toast({
+        title: "Select a Role",
         description: "Please choose whether you are a farmer or a customer.",
         variant: "destructive",
       });
-
-    if (formData.password !== formData.confirmPassword)
-      return toast({
-        title: "Passwords do not match",
-        variant: "destructive",
-      });
-
-    // Password strength validation
-    if (formData.password.length < 6) {
-      return toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters long.",
-        variant: "destructive",
-      });
+      return;
     }
+
+    if (!validateForm()) return;
 
     try {
       setIsLoading(true);
-      console.log("Attempting signup with:", { 
-        name: formData.name,
-        email: formData.email,
-        role: selectedRole 
-      });
-
+      
       const response = await API.post("/register", {
-        name: formData.name,
-        email: formData.email,
+        name: formData.name.trim(),
+        email: formData.email.toLowerCase().trim(),
         password: formData.password,
         role: selectedRole,
       });
 
-      console.log("Signup response:", response.data);
-
       toast({
-        title: "Account created successfully! 🎉",
-        description: "You can now log in to your account.",
+        title: "Account Created Successfully! 🎉",
+        description: `You are now registered as a ${selectedRole}.`,
       });
 
-      // Redirect to login page after successful signup
+      localStorage.setItem('auth_token', response.data.token);
+      
+      // Store password temporarily for auto-registration
+      localStorage.setItem('temp_password', formData.password);
+
+
+      // Redirect based on account type
       setTimeout(() => {
-        navigate("/login");
-      }, 2000);
+        if (response.data.user.has_farmer && response.data.user.has_customer) {
+          navigate("/account-choice");
+        } else {
+          navigate(selectedRole === "farmer" ? "/farmer" : "/customer");
+        }
+      }, 1500);
 
     } catch (error) {
       console.error("Signup error:", error);
       
       let errorMessage = "Signup failed. Please try again.";
       
-      if (error.response) {
-        if (error.response.status === 400) {
-          if (error.response.data.email) {
-            errorMessage = "This email is already registered. Please use a different email or login.";
-          } else if (error.response.data.password) {
-            errorMessage = error.response.data.password[0];
-          } else {
-            errorMessage = error.response.data.detail || "Please check your information and try again.";
-          }
-        } else if (error.response.status === 500) {
-          errorMessage = "Server error. Please try again later.";
-        }
-      } else if (error.request) {
-        errorMessage = "No response from server. Please check if the backend is running.";
+      if (error.response?.status === 400) {
+        errorMessage = error.response.data.detail || "Please check your information and try again.";
       }
 
       toast({
-        title: "Signup failed",
+        title: "Signup Failed",
         description: errorMessage,
         variant: "destructive",
       });
@@ -117,7 +154,17 @@ const Signup = () => {
     }
   };
 
-  // Role selection screen
+  const PasswordRequirement = ({ met, text }) => (
+    <div className="flex items-center space-x-2 text-xs">
+      {met ? (
+        <Check className="h-3 w-3 text-green-500" />
+      ) : (
+        <X className="h-3 w-3 text-red-500" />
+      )}
+      <span className={met ? "text-green-600" : "text-red-600"}>{text}</span>
+    </div>
+  );
+
   if (!selectedRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/5 py-12 px-4">
@@ -143,7 +190,6 @@ const Signup = () => {
           </div>
 
           <div className="grid gap-4">
-            {/* Farmer */}
             <motion.div 
               whileHover={{ scale: 1.02 }} 
               whileTap={{ scale: 0.98 }}
@@ -167,7 +213,6 @@ const Signup = () => {
               </Card>
             </motion.div>
 
-            {/* Customer */}
             <motion.div 
               whileHover={{ scale: 1.02 }} 
               whileTap={{ scale: 0.98 }}
@@ -217,7 +262,6 @@ const Signup = () => {
     );
   }
 
-  // Signup form
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/5 py-12 px-4">
       <motion.div
@@ -265,7 +309,7 @@ const Signup = () => {
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="space-y-2"
               >
-                <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
+                <Label htmlFor="name" className="text-sm font-medium">Full Name *</Label>
                 <Input 
                   id="name"
                   name="name" 
@@ -284,7 +328,7 @@ const Signup = () => {
                 transition={{ duration: 0.5, delay: 0.3 }}
                 className="space-y-2"
               >
-                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">Email *</Label>
                 <Input 
                   id="email"
                   name="email" 
@@ -304,14 +348,14 @@ const Signup = () => {
                 transition={{ duration: 0.5, delay: 0.4 }}
                 className="space-y-2"
               >
-                <Label className="text-sm font-medium">Password</Label>
+                <Label className="text-sm font-medium">Password *</Label>
                 <div className="relative">
                   <Input
                     name="password"
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={handleInputChange}
-                    placeholder="Create a password"
+                    placeholder="Create a strong password"
                     required
                     disabled={isLoading}
                     className="bg-background/50 border-border/70 focus:border-primary pr-10"
@@ -327,9 +371,14 @@ const Signup = () => {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Password must be at least 6 characters long
-                </p>
+                
+                <div className="space-y-1 p-2 bg-muted/50 rounded-md">
+                  <PasswordRequirement met={passwordStrength.length} text="At least 8 characters" />
+                  <PasswordRequirement met={passwordStrength.uppercase} text="One uppercase letter" />
+                  <PasswordRequirement met={passwordStrength.lowercase} text="One lowercase letter" />
+                  <PasswordRequirement met={passwordStrength.number} text="One number" />
+                  <PasswordRequirement met={passwordStrength.special} text="One special character" />
+                </div>
               </motion.div>
 
               <motion.div
@@ -338,7 +387,7 @@ const Signup = () => {
                 transition={{ duration: 0.5, delay: 0.5 }}
                 className="space-y-2"
               >
-                <Label className="text-sm font-medium">Confirm Password</Label>
+                <Label className="text-sm font-medium">Confirm Password *</Label>
                 <div className="relative">
                   <Input
                     name="confirmPassword"

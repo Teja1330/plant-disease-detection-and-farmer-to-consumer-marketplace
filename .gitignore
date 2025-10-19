@@ -1,5 +1,5 @@
 # ========================
-# Django / Python
+# PYTHON / DJANGO
 # ========================
 
 # Byte-compiled / optimized / DLL files
@@ -28,51 +28,115 @@ wheels/
 .installed.cfg
 *.egg
 
-# Django stuff:
+# Django stuff
 *.log
 *.pot
 *.pyc
 *.pyo
 *.sqlite3
 *.db
-*.env
-*.venv
+local_settings.py
+db.sqlite3
+celerybeat-schedule
+
+# Environment / virtualenv
 .env
+.env.local
+.env.production
+.env.development
+.env.test
+.env.*.local
+.venv/
 venv/
 ENV/
 env/
+*.env
+
+# IDE / editor settings
 .idea/
 .vscode/
+*.swp
 
 # Media / uploaded files
 media/
+uploads/
+
+# Static / collected files
+static/
 staticfiles/
+collected_static/
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+test-results/
 
 # ========================
-# Node / React / Vite
+# NODE / REACT / VITE
 # ========================
 
-# Node modules
+# Dependencies
 node_modules/
+
+# Build output
+dist/
+build/
+.vite/
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Vite build
-dist/
-.vite/
-
 # Environment files
 .env.local
-.env.*.local
-.env
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Logs
-*.log
+# Cache
+.cache/
+*.tsbuildinfo
 
-# Mac / OS
+# ========================
+# SYSTEM / MISC
+# ========================
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
 
-# VSCode
-.vscode/
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.tmp
+~$*
+
+# ========================
+# CUSTOM PROJECT FOLDERS
+# ========================
+
+# If you keep frontend inside Django project folder
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env.local
+
+# Optional: ignore Python migrations if auto-generated
+# **/migrations/
