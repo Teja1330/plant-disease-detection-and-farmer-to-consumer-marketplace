@@ -150,3 +150,10 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+export function handleScroll() {
+  window.scrollTo({
+    top: 10,
+    behavior: "smooth",
+  });
+}

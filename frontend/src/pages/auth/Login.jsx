@@ -9,8 +9,13 @@ import API from "../../api";
 import { useUser } from "../../App";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, LogIn, UserPlus } from "lucide-react";
+import { handleScroll } from "@/components/Navbar";
 
 const Login = () => {
+  useEffect(() => {
+        handleScroll();
+  }, []);
+      
   const { setUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

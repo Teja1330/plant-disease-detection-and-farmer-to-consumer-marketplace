@@ -1,12 +1,17 @@
-import React from "react";
+import React, {useEffect} from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Tractor, User, ArrowRight } from "lucide-react";
 import { useUser } from "../App";
+import { handleScroll } from "@/components/Navbar";
+
 
 const AccountChoice = () => {
+  useEffect(() => {
+        handleScroll();
+      }, []);
   const navigate = useNavigate();
   const { setUser } = useUser();
 

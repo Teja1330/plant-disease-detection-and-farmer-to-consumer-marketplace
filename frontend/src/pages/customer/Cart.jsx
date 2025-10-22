@@ -18,12 +18,14 @@ import {
   Truck,
   ArrowLeft
 } from "lucide-react";
+import { handleScroll } from "@/components/Navbar";
 
 const Cart = () => {
   const { toast } = useToast();
   const [cartItems, setCartItems] = useState([]);
 
   useEffect(() => {
+    handleScroll();
     // Load cart from localStorage
     const savedCart = JSON.parse(localStorage.getItem('cart')) || [];
     setCartItems(savedCart);

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Tractor, Eye, EyeOff, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import API from "../../api";
+import { handleScroll } from "@/components/Navbar";
 
 const Signup = () => {
   const [selectedRole, setSelectedRole] = useState(null);
@@ -31,6 +32,7 @@ const Signup = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    handleScroll();
     localStorage.removeItem('auth_token');
   }, []);
 

@@ -5,8 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Search, ShoppingCart, Star, MapPin, Clock, Leaf } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
+import { handleScroll } from "@/components/Navbar";
 
 const CustomerHome = () => {
+  useEffect(() => {
+        handleScroll();
+      }, []);
   const { toast } = useToast();
 
   const featuredProducts = [

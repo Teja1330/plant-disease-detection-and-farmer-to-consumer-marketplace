@@ -14,8 +14,13 @@ import {
   ShoppingCart,
   FileText
 } from "lucide-react";
+import { useEffect } from "react";
+import { handleScroll } from "@/components/Navbar";
 
 const Reports = () => {
+  useEffect(() => {
+        handleScroll();
+      }, []);
   const salesData = {
     thisMonth: 50,
     lastMonth: 20,

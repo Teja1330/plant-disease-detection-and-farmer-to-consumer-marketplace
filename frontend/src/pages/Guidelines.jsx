@@ -12,8 +12,13 @@ import {
   AlertTriangle,
   Info
 } from "lucide-react";
+import { useEffect } from "react";
+import { handleScroll } from "@/components/Navbar";
 
 const Guidelines = () => {
+  useEffect(() => {
+        handleScroll();
+      }, []);
   const farmerGuidelines = [
     {
       category: "Product Quality",

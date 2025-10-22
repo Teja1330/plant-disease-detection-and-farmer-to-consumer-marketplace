@@ -1,8 +1,13 @@
 ﻿import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Target, Award, Globe } from "lucide-react";
+import { useEffect } from "react";
+import { handleScroll } from "@/components/Navbar";
 
 const About = () => {
+  useEffect(() => {
+        handleScroll();
+      }, []);
   const values = [
     {
       icon: Users,

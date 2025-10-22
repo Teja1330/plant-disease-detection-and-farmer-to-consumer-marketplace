@@ -20,12 +20,17 @@ import {
   FileImage, 
   Zap 
 } from "lucide-react";
+import { useEffect } from "react";
 
 // Import the toast hook properly
 import { useToast } from "@/hooks/use-toast";
+import { handleScroll } from "@/components/Navbar";
 
 const Detection = () => {
-  const { toast } = useToast(); // ✅ Fixed: Properly using the hook
+  useEffect(() => {
+        handleScroll();
+      }, []);
+  const { toast } = useToast(); 
 
   const [history, setHistory] = useState([]);
   const [image, setImage] = useState(null);

@@ -14,8 +14,14 @@ import {
   Users,
   BarChart3
 } from "lucide-react";
+import { useEffect } from "react";
+import { handleScroll } from "@/components/Navbar";
+
 
 const Dashboard = () => {
+  useEffect(() => {
+        handleScroll();
+      }, []);
   const stats = [
     {
       title: "Total Revenue",

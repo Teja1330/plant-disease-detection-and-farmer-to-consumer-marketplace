@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Package, Clock, CheckCircle, Star, MapPin, Calendar, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { handleScroll } from "@/components/Navbar";
 
 const OrderHistory = () => {
+  useEffect(() => {
+    handleScroll();
+  }, []);
   const { toast } = useToast();
 
   const orders = [

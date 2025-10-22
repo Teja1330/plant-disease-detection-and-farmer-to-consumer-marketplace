@@ -8,7 +8,13 @@ import marketplaceImage from "/assets/marketplace-service.jpg";
 import detectionImage from "/assets/disease-detection-service.jpg";
 import connectionImage from "/assets/connection-service.jpg";
 
+import { useEffect } from "react";
+import { handleScroll } from "@/components/Navbar";
+
 const Services = () => {
+  useEffect(() => {
+        handleScroll();
+      }, []);
   const mainServices = [
     {
       title: "Digital Marketplace",

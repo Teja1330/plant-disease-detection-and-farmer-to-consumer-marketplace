@@ -16,6 +16,7 @@ import {
   List
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { handleScroll } from "@/components/Navbar";
 
 const Marketplace = () => {
   const { toast } = useToast();
@@ -25,6 +26,7 @@ const Marketplace = () => {
   const [cart, setCart] = useState([]);
 
   useEffect(() => {
+    handleScroll();
     // Load cart from localStorage on component mount
     const savedCart = JSON.parse(localStorage.getItem('cart')) || [];
     setCart(savedCart);

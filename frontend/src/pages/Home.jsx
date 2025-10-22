@@ -11,8 +11,13 @@ import {
   TrendingUp,
 } from "lucide-react";
 import heroImage from "/assets/hero-agriculture.jpg";
+import { useEffect } from "react";
+import { handleScroll } from "@/components/Navbar";
 
 const Home = () => {
+  useEffect(() => {
+        handleScroll();
+      }, []);
   const { user } = useUser();
 
   const stats = [
