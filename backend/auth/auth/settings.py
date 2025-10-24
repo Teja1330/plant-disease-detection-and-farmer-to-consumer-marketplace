@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'plant_detection',
     'users',
 ]
 
@@ -104,10 +105,13 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # REST Framework settings - DISABLE CSRF FOR API
+# Add to REST_FRAMEWORK settings
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'users.authentication.JWTAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.AllowAny',  # Keep this for public endpoints
     ],
 }
 
