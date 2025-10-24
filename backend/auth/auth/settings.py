@@ -1,12 +1,17 @@
 """
 Django settings for auth project.
 """
-
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-4=821c8&pxnn(jbdxw%gat(6_$w*&$l3$tth(z$1^3ska@0s$x'
+
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 DEBUG = True
 

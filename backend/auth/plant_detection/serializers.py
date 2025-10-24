@@ -3,10 +3,17 @@ from rest_framework import serializers
 from .models import PlantDetectionResult
 
 class PlantDetectionResultSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = PlantDetectionResult
-        fields = ['id', 'image', 'prediction', 'confidence', 'created_at', 'user_id', 'user_email', 'user_type']
-        read_only_fields = ['id', 'created_at', 'user_id', 'user_email', 'user_type']
+        fields = ['id', 'image', 'image_url', 'prediction', 'confidence', 'created_at', 'user_id', 'user_email', 'user_type']
+        read_only_fields = ['id', 'created_at', 'user_id', 'user_email', 'user_type', 'image_url']
+    
+    def get_image_url(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
 
 class PlantDetectionRequestSerializer(serializers.Serializer):
     image = serializers.ImageField(

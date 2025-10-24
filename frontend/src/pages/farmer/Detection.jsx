@@ -1,4 +1,4 @@
-﻿// Detection.jsx - Simplified version
+﻿// Detection.jsx - Complete updated version
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,9 @@ import {
   Camera,
   Upload,
   History,
-  Leaf
+  Leaf,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { handleScroll } from "@/components/Navbar";
@@ -21,12 +23,15 @@ const Detection = () => {
     handleScroll();
   }, []);
 
+  const API_BASE_URL = 'http://127.0.0.1:8000';
+
   const { toast } = useToast();
   const [history, setHistory] = useState([]);
   const [image, setImage] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const handleUpload = (e) => {
     const file = e.target.files[0];
@@ -40,7 +45,6 @@ const Detection = () => {
     }
   };
 
-  // Detection.jsx - Fix error handling
   const handleDetect = async () => {
     if (!selectedFile) {
       toast({
@@ -58,12 +62,14 @@ const Detection = () => {
 
       setResult(detectionResult);
 
-      // Update history
+      // Update history immediately
       const newHistoryItem = {
-        image: image,
+        id: detectionResult.id,
+        image: detectionResult.image_url || image,
         result: detectionResult.prediction,
         confidence: detectionResult.confidence,
-        date: new Date().toLocaleString()
+        date: new Date(detectionResult.created_at).toLocaleString(),
+        top_predictions: detectionResult.top_predictions || []
       };
 
       setHistory([newHistoryItem, ...history]);
@@ -76,32 +82,7 @@ const Detection = () => {
 
     } catch (error) {
       console.error("Detection error:", error);
-
-      // Don't logout automatically for 403 errors
-      if (error.response?.status === 401) {
-        // Only logout for 401 (Unauthorized)
-        toast({
-          title: "Session Expired",
-          description: "Please login again",
-          variant: "destructive"
-        });
-        localStorage.removeItem('auth_token');
-        window.location.href = '/login';
-      } else if (error.response?.status === 403) {
-        // For 403, show access denied but don't logout
-        toast({
-          title: "Access Denied",
-          description: error.response?.data?.detail || "You don't have permission to use this feature",
-          variant: "destructive"
-        });
-      } else {
-        // Other errors (network, server, etc.)
-        toast({
-          title: "Detection Failed",
-          description: error.response?.data?.detail || "Failed to process image",
-          variant: "destructive"
-        });
-      }
+      handleError(error);
     } finally {
       setLoading(false);
     }
@@ -109,15 +90,102 @@ const Detection = () => {
 
   const loadHistory = async () => {
     try {
+      console.log("🔄 Loading history...");
       const response = await plantDetectionAPI.getHistory();
-      setHistory(response.data.map(item => ({
-        image: item.image,
-        result: item.prediction,
-        confidence: item.confidence,
-        date: new Date(item.created_at).toLocaleString()
-      })));
+      console.log("📦 History API response:", response.data);
+
+      const historyData = response.data.map(item => {
+        // Fix image URL - convert relative path to absolute URL
+        let imageUrl = item.image_url;
+        if (imageUrl && imageUrl.startsWith('/')) {
+          imageUrl = `${API_BASE_URL}${imageUrl}`;
+        }
+
+        console.log("📷 History item:", {
+          id: item.id,
+          original_url: item.image_url,
+          fixed_url: imageUrl
+        });
+
+        return {
+          id: item.id,
+          image: imageUrl, // Use the fixed absolute URL
+          result: item.prediction,
+          confidence: item.confidence,
+          date: new Date(item.created_at).toLocaleString(),
+          top_predictions: item.top_predictions || []
+        };
+      });
+
+      console.log("🎯 Processed history data:", historyData);
+      setHistory(historyData);
+
     } catch (error) {
-      console.error("Failed to load history:", error);
+      console.error("❌ Failed to load history:", error);
+      console.error("Error details:", error.response?.data);
+      toast({
+        title: "Failed to load history",
+        description: error.response?.data?.detail || "Please try again",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteHistory = async (detectionId = null) => {
+    try {
+      setDeletingId(detectionId);
+      await plantDetectionAPI.deleteHistory(detectionId);
+
+      if (detectionId) {
+        // Delete single item
+        setHistory(history.filter(item => item.id !== detectionId));
+        toast({
+          title: "Deleted",
+          description: "Detection removed from history",
+          variant: "success"
+        });
+      } else {
+        // Delete all
+        setHistory([]);
+        toast({
+          title: "History Cleared",
+          description: "All detection history has been cleared",
+          variant: "success"
+        });
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete history",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleError = (error) => {
+    if (error.response?.status === 401) {
+      toast({
+        title: "Session Expired",
+        description: "Please login again",
+        variant: "destructive"
+      });
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login';
+    } else if (error.response?.status === 403) {
+      toast({
+        title: "Access Denied",
+        description: error.response?.data?.detail || "You don't have permission to use this feature",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Detection Failed",
+        description: error.response?.data?.detail || "Failed to process image",
+        variant: "destructive"
+      });
     }
   };
 
@@ -125,6 +193,12 @@ const Detection = () => {
     if (confidence > 0.8) return 'text-green-600';
     if (confidence > 0.6) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  const getConfidenceVariant = (confidence) => {
+    if (confidence > 0.8) return 'default';
+    if (confidence > 0.6) return 'secondary';
+    return 'destructive';
   };
 
   return (
@@ -204,12 +278,31 @@ const Detection = () => {
                           Prediction: {result.prediction}
                         </span>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 mb-3">
                         <span className="text-sm text-gray-600">Confidence:</span>
                         <span className={`text-sm font-medium ${getConfidenceColor(result.confidence)}`}>
                           {(result.confidence * 100).toFixed(2)}%
                         </span>
                       </div>
+
+                      {/* Top Predictions - Only show if there are multiple meaningful ones */}
+                      {result.top_predictions && result.top_predictions.length > 1 && (
+                        <div className="mt-3">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Other Possibilities:</h4>
+                          <div className="space-y-1">
+                            {result.top_predictions.slice(1).map(([pred, conf], index) => (
+                              <div key={index} className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600">
+                                  {index + 1}. {pred}
+                                </span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {(conf * 100).toFixed(1)}%
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -218,35 +311,107 @@ const Detection = () => {
 
             {/* History Tab */}
             <TabsContent value="history">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Detection History</h3>
+                {history.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDeleteHistory()}
+                    disabled={deletingId === 'all'}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    {deletingId === 'all' ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-2"></div>
+                        Clearing...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Clear All
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {history.length === 0 ? (
-                  <p className="text-muted-foreground col-span-full text-center py-8">No detection history yet.</p>
+                  <div className="col-span-full text-center py-12">
+                    <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-muted-foreground text-lg">No detection history yet.</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Upload and detect images to see them here.
+                    </p>
+                  </div>
                 ) : (
-                  history.map((item, index) => (
+                  history.map((item) => (
                     <motion.div
-                      key={index}
+                      key={item.id}
                       initial={{ opacity: 0, y: 50 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: index * 0.1 }}
+                      transition={{ duration: 0.6 }}
                     >
-                      <Card className="hover:shadow-medium transition-all duration-300 bg-white border">
+                      <Card className="hover:shadow-medium transition-all duration-300 bg-white border group">
                         <CardContent className="p-0">
                           <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center relative">
                             <img
                               src={item.image}
                               alt="Detection result"
                               className="object-contain w-full h-full rounded-t-lg"
+                              onError={(e) => {
+                                // If image fails to load, show a placeholder
+                                console.error(`Failed to load image: ${item.image}`);
+                                e.target.src = 'https://via.placeholder.com/300x300?text=Image+Not+Found';
+                                e.target.alt = 'Image failed to load';
+                              }}
+                              onLoad={() => console.log(`Image loaded: ${item.image}`)}
                             />
                             <Badge className="absolute top-2 left-2 bg-blue-600 text-white text-xs">
                               {item.result}
                             </Badge>
-                            <Badge className="absolute top-2 right-2 bg-green-600 text-white text-xs">
+                            <Badge
+                              variant={getConfidenceVariant(item.confidence)}
+                              className="absolute top-2 right-2 text-xs"
+                            >
                               {(item.confidence * 100).toFixed(1)}%
                             </Badge>
+
+                            {/* Delete Button */}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleDeleteHistory(item.id)}
+                              disabled={deletingId === item.id}
+                            >
+                              {deletingId === item.id ? (
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                              ) : (
+                                <Trash2 className="h-3 w-3" />
+                              )}
+                            </Button>
                           </div>
                           <div className="p-4 space-y-2">
                             <p className="text-sm text-muted-foreground">Detected: {item.result}</p>
                             <p className="text-sm text-muted-foreground">Date: {item.date}</p>
+
+                            {/* Top Predictions in History - Only show if there are multiple meaningful ones */}
+                            {item.top_predictions && item.top_predictions.length > 1 && (
+                              <div className="mt-2 pt-2 border-t">
+                                <p className="text-xs font-medium text-gray-500 mb-1">Other Possibilities:</p>
+                                <div className="space-y-1">
+                                  {item.top_predictions.slice(1, 3).map(([pred, conf], index) => (
+                                    <div key={index} className="flex justify-between items-center text-xs">
+                                      <span className="text-gray-500">
+                                        {index + 1}. {pred}
+                                      </span>
+                                      <span className="text-gray-400">{(conf * 100).toFixed(1)}%</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>

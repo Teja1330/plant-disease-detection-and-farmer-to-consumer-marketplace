@@ -104,21 +104,20 @@ class PlantDiseaseDetector:
             print(f"🔍 Input array shape: {input_arr.shape}")
             print(f"🔍 Input array range: {input_arr.min()} to {input_arr.max()}")  # Should be 0-255
             
-            # CORRECT: NO NORMALIZATION - Use raw pixel values 0-255
-            # The training code doesn't normalize, it uses raw images
-            
             # Make prediction
             predictions = self._model.predict(input_arr, verbose=0)
             
             print(f"🔍 Raw predictions shape: {predictions.shape}")
             
-            # Get top 5 predictions for debugging
-            top_5_indices = np.argsort(predictions[0])[-5:][::-1]
-            top_5_confidences = predictions[0][top_5_indices]
-            top_5_classes = [self._class_names[i] for i in top_5_indices]
+            # Get top predictions with meaningful confidence (above 1%)
+            all_predictions = list(zip(self._class_names, predictions[0]))
+            meaningful_predictions = [(cls, conf) for cls, conf in all_predictions if conf > 0.05]            
+            # Sort by confidence and take top 3
+            meaningful_predictions.sort(key=lambda x: x[1], reverse=True)
+            top_predictions = meaningful_predictions[:3]
             
-            print("🔍 Top 5 predictions:")
-            for i, (cls, conf) in enumerate(zip(top_5_classes, top_5_confidences)):
+            print("🔍 Top meaningful predictions:")
+            for i, (cls, conf) in enumerate(top_predictions):
                 print(f"   {i+1}. {cls}: {conf:.4f} ({conf*100:.2f}%)")
             
             # Get results
@@ -132,7 +131,7 @@ class PlantDiseaseDetector:
                 "prediction": prediction,
                 "confidence": confidence,
                 "class_index": int(result_index),
-                "top_predictions": list(zip(top_5_classes, top_5_confidences))
+                "top_predictions": top_predictions  # Only meaningful predictions
             }
             
         except Exception as e:

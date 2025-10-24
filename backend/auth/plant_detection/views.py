@@ -1,10 +1,11 @@
-# plant_detection/views.py
+# plant_detection/views.py - Add delete functionality
 import os
 import tempfile
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.shortcuts import get_object_or_404
 
 from .services import PlantDiseaseDetector
 from .models import PlantDetectionResult
@@ -69,7 +70,7 @@ class PlantDetectionView(APIView):
                     'prediction': result['prediction'],
                     'confidence': result['confidence'],
                     'class_index': result.get('class_index', 0),
-                    'top_predictions': result.get('top_predictions', [])
+                    'top_predictions': result.get('top_predictions', [])[:3]  # Only top 3
                 })
 
                 return Response(response_data)
@@ -96,6 +97,21 @@ class DetectionHistoryView(APIView):
         except Exception as e:
             print(f"❌ History error: {str(e)}")
             return Response({'detail': f'Failed to fetch history: {str(e)}'}, status=400)
+    
+    def delete(self, request, detection_id=None):
+        try:
+            if detection_id:
+                # Delete specific detection
+                detection = get_object_or_404(PlantDetectionResult, id=detection_id, user_id=request.user.id)
+                detection.delete()
+                return Response({'detail': 'Detection deleted successfully'})
+            else:
+                # Delete all user's history
+                PlantDetectionResult.objects.filter(user_id=request.user.id).delete()
+                return Response({'detail': 'All history deleted successfully'})
+        except Exception as e:
+            print(f"❌ Delete error: {str(e)}")
+            return Response({'detail': f'Failed to delete: {str(e)}'}, status=400)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class TestAuthView(APIView):

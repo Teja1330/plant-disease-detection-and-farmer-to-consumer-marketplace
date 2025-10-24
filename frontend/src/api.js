@@ -50,6 +50,7 @@ API.interceptors.response.use(
 
 export default API;
 
+// api.js - Update plantDetectionAPI
 export const plantDetectionAPI = {
   detect: (imageFile) => {
     const formData = new FormData();
@@ -64,5 +65,13 @@ export const plantDetectionAPI = {
 
   getHistory: () => {
     return API.get('/plant/history/');
+  },
+
+  deleteHistory: (detectionId = null) => {
+    if (detectionId) {
+      return API.delete(`/plant/history/${detectionId}/`);
+    } else {
+      return API.delete('/plant/history/');
+    }
   }
 };
