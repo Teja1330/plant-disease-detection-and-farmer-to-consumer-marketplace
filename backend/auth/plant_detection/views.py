@@ -13,26 +13,27 @@ from users.permissions import IsFarmerOrMultiAccount, IsAuthenticatedWithJWT
 
 @method_decorator(csrf_exempt, name='dispatch')
 class PlantDetectionView(APIView):
-    permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]        
+    permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
 
     def post(self, request):
         try:
             # Debug: Check user information
-            print(f"🔍 User: {request.user.email}")
-            print(f"🔍 User role: {getattr(request.user, 'role', 'No role')}")
+            print(f"🔍 User ID: {request.user.id}")
+            print(f"🔍 User Email: {request.user.email}")
+            print(f"🔍 User Role: {getattr(request.user, 'role', 'No role')}")
             print(f"🔍 Has farmer: {getattr(request.user, 'has_farmer', False)}")
-
+            
             # Validate the request
             serializer = PlantDetectionRequestSerializer(data=request.data)
             if not serializer.is_valid():
                 return Response({'detail': 'Invalid data', 'errors': serializer.errors}, status=400)
 
             image_file = request.FILES['image']
-
+            
             # Validate file type
             if not image_file.content_type.startswith('image/'):
                 return Response({'detail': 'File must be an image'}, status=400)
-
+            
             # Validate file size (max 10MB)
             if image_file.size > 10 * 1024 * 1024:
                 return Response({'detail': 'File size too large. Maximum 10MB allowed.'}, status=400)
@@ -52,9 +53,7 @@ class PlantDetectionView(APIView):
                 if 'error' in result:
                     return Response({'detail': result['error']}, status=400)
 
-
-                # Save the result to database
-                # In PlantDetectionView post method, update the creation part:
+                # Save the result to database with user information
                 detection_result = PlantDetectionResult.objects.create(
                     user_id=request.user.id,
                     user_email=request.user.email,
@@ -63,10 +62,9 @@ class PlantDetectionView(APIView):
                     prediction=result['prediction'],
                     confidence=result['confidence']
                 )
+
                 # Serialize the response
-                response_data = PlantDetectionResultSerializer(
-                    detection_result).data
-                # In the detection part, update the response:
+                response_data = PlantDetectionResultSerializer(detection_result).data
                 response_data.update({
                     'prediction': result['prediction'],
                     'confidence': result['confidence'],
@@ -82,23 +80,26 @@ class PlantDetectionView(APIView):
                     os.unlink(temp_path)
 
         except Exception as e:
+            print(f"❌ Detection error: {str(e)}")
             return Response({'detail': f'Detection failed: {str(e)}'}, status=400)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class DetectionHistoryView(APIView):
-    permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]  # Use custom permissions
+    permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
 
     def get(self, request):
         try:
-            history = PlantDetectionResult.objects.filter(user=request.user).order_by('-created_at')
+            # Filter by user_id
+            history = PlantDetectionResult.objects.filter(user_id=request.user.id).order_by('-created_at')
             serializer = PlantDetectionResultSerializer(history, many=True)
             return Response(serializer.data)
         except Exception as e:
+            print(f"❌ History error: {str(e)}")
             return Response({'detail': f'Failed to fetch history: {str(e)}'}, status=400)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class TestAuthView(APIView):
-    permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]  # Use custom permissions
+    permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
     
     def get(self, request):
         return Response({

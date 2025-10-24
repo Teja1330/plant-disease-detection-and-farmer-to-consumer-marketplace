@@ -83,7 +83,7 @@ class PlantDiseaseDetector:
             cls._model = None
 
     def predict(self, image_path):
-        """Make prediction on a plant image"""
+        """Make prediction on a plant image - CORRECTED VERSION"""
         if not TENSORFLOW_AVAILABLE:
             return {"error": "TensorFlow not installed"}
         
@@ -93,29 +93,32 @@ class PlantDiseaseDetector:
         try:
             print(f"🔍 Making prediction on image: {image_path}")
             
-            # Preprocess the image
-            image = tf.keras.preprocessing.image.load_img(image_path, target_size=(128, 128))
+            # CORRECT: Use 128x128 as per training code
+            target_size = (128, 128)
+            
+            # Load image exactly like the test code - NO NORMALIZATION
+            image = tf.keras.preprocessing.image.load_img(image_path, target_size=target_size)
             input_arr = tf.keras.preprocessing.image.img_to_array(image)
             input_arr = np.array([input_arr])  # Convert single image to batch
             
             print(f"🔍 Input array shape: {input_arr.shape}")
-            print(f"🔍 Input array range: {input_arr.min()} to {input_arr.max()}")
+            print(f"🔍 Input array range: {input_arr.min()} to {input_arr.max()}")  # Should be 0-255
             
-            # Normalize if needed (assuming model expects 0-1 range)
-            input_arr = input_arr / 255.0
+            # CORRECT: NO NORMALIZATION - Use raw pixel values 0-255
+            # The training code doesn't normalize, it uses raw images
             
             # Make prediction
             predictions = self._model.predict(input_arr, verbose=0)
             
             print(f"🔍 Raw predictions shape: {predictions.shape}")
             
-            # Get top 3 predictions for debugging
-            top_3_indices = np.argsort(predictions[0])[-3:][::-1]
-            top_3_confidences = predictions[0][top_3_indices]
-            top_3_classes = [self._class_names[i] for i in top_3_indices]
+            # Get top 5 predictions for debugging
+            top_5_indices = np.argsort(predictions[0])[-5:][::-1]
+            top_5_confidences = predictions[0][top_5_indices]
+            top_5_classes = [self._class_names[i] for i in top_5_indices]
             
-            print("🔍 Top 3 predictions:")
-            for i, (cls, conf) in enumerate(zip(top_3_classes, top_3_confidences)):
+            print("🔍 Top 5 predictions:")
+            for i, (cls, conf) in enumerate(zip(top_5_classes, top_5_confidences)):
                 print(f"   {i+1}. {cls}: {conf:.4f} ({conf*100:.2f}%)")
             
             # Get results
@@ -129,7 +132,7 @@ class PlantDiseaseDetector:
                 "prediction": prediction,
                 "confidence": confidence,
                 "class_index": int(result_index),
-                "top_predictions": list(zip(top_3_classes, top_3_confidences))
+                "top_predictions": list(zip(top_5_classes, top_5_confidences))
             }
             
         except Exception as e:

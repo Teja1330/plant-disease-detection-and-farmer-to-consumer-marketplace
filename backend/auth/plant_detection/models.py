@@ -2,9 +2,9 @@
 from django.db import models
 
 class PlantDetectionResult(models.Model):
-    user_id = models.PositiveIntegerField()  # Required field
-    user_email = models.EmailField()  # Required field
-    user_type = models.CharField(max_length=20)  # Required field
+    user_id = models.PositiveIntegerField()  # Store user ID
+    user_email = models.EmailField()  # Store user email for reference
+    user_type = models.CharField(max_length=20)  # 'farmer', 'customer', 'multi'
     
     image = models.ImageField(upload_to='plant_images/')
     prediction = models.CharField(max_length=255)
