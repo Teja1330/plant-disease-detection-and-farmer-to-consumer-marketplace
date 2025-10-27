@@ -94,8 +94,12 @@ export const farmerAPI = {
     return API.get('/farmer/products/');
   },
 
-  createProduct: (productData) => {
-    return API.post('/farmer/products/', productData);
+  createProduct: (formData) => {
+    return API.post('/farmer/products/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data', // Important for file uploads
+      }
+    });
   },
 
   deleteProduct: (productId) => {

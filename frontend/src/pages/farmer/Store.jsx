@@ -1,4 +1,4 @@
-﻿// Store.jsx - Complete updated version
+﻿// Store.jsx - Fixed number input handling
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,7 @@ import {
   Plus, 
   Leaf, 
   Trash2,
-  Upload,
-  Image as ImageIcon
+  Upload
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast"; 
 import { handleScroll } from "@/components/Navbar";
@@ -22,7 +21,7 @@ const Store = () => {
   const { toast } = useToast(); 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("products"); // Set default to "products"
+  const [activeTab, setActiveTab] = useState("products");
   
   useEffect(() => {
     handleScroll();
@@ -63,7 +62,6 @@ const Store = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         toast({
           title: "Invalid file type",
@@ -73,7 +71,6 @@ const Store = () => {
         return;
       }
 
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -95,6 +92,36 @@ const Store = () => {
     }
   };
 
+  // Fixed input handlers for numbers
+  const handlePriceChange = (e) => {
+    const value = e.target.value;
+    // Allow only numbers and decimal point
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setNewProduct(prev => ({
+        ...prev,
+        price: value
+      }));
+    }
+  };
+
+  const handleStockChange = (e) => {
+    const value = e.target.value;
+    // Allow only numbers
+    if (value === '' || /^\d+$/.test(value)) {
+      setNewProduct(prev => ({
+        ...prev,
+        stock: value
+      }));
+    }
+  };
+
+  const handleTextChange = (field, value) => {
+    setNewProduct(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const handleAddProduct = async (e) => {
     e.preventDefault();
     
@@ -107,29 +134,47 @@ const Store = () => {
       return;
     }
 
+    // Validate price is a valid number
+    if (!newProduct.price || isNaN(parseFloat(newProduct.price)) || parseFloat(newProduct.price) <= 0) {
+      toast({
+        title: "Invalid Price",
+        description: "Please enter a valid price greater than 0",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       
       // Create FormData to handle file upload
       const formData = new FormData();
-      formData.append('name', newProduct.name);
-      formData.append('price', parseFloat(newProduct.price));
-      formData.append('unit', newProduct.unit);
-      formData.append('description', newProduct.description);
+      formData.append('name', newProduct.name.trim());
+      formData.append('price', parseFloat(newProduct.price)); // Convert to number
+      formData.append('unit', newProduct.unit.trim());
+      formData.append('description', newProduct.description.trim());
       formData.append('category', newProduct.category);
-      formData.append('stock', parseInt(newProduct.stock) || 0);
-      formData.append('organic', newProduct.organic);
+      formData.append('stock', parseInt(newProduct.stock) || 0); // Convert to number, default to 0
+      formData.append('organic', newProduct.organic.toString());
       formData.append('harvest_date', newProduct.harvest_date);
       
       if (newProduct.image) {
         formData.append('image', newProduct.image);
       }
 
-      console.log("🔄 Creating product with data:", Object.fromEntries(formData));
+      console.log("🔄 Creating product with data:", {
+        name: newProduct.name,
+        price: parseFloat(newProduct.price),
+        unit: newProduct.unit,
+        stock: parseInt(newProduct.stock) || 0,
+        organic: newProduct.organic
+      });
 
       const response = await farmerAPI.createProduct(formData);
       
       setProducts(prev => [response.data, ...prev]);
+      
+      // Reset form with proper values
       setNewProduct({
         name: "",
         price: "",
@@ -141,6 +186,10 @@ const Store = () => {
         harvest_date: new Date().toISOString().split('T')[0],
         image: null
       });
+
+      // Reset file input
+      const fileInput = document.getElementById('product-image');
+      if (fileInput) fileInput.value = '';
 
       toast({
         title: "Product Added!",
@@ -196,7 +245,7 @@ const Store = () => {
           </p>
         </motion.div>
 
-        {/* Tabs - Set default value to "products" */}
+        {/* Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
@@ -205,7 +254,7 @@ const Store = () => {
           <Tabs 
             value={activeTab} 
             onValueChange={setActiveTab}
-            defaultValue="products" // Add this line
+            defaultValue="products"
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-2 mb-8">
@@ -219,7 +268,7 @@ const Store = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* Products List - This tab opens by default */}
+            {/* Products List */}
             <TabsContent value="products" className="space-y-6">
               {loading ? (
                 <div className="text-center py-16">
@@ -227,18 +276,17 @@ const Store = () => {
                   <p className="mt-4 text-lg text-muted-foreground">Loading products...</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"> {/* More columns for smaller cards */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {products.map((product, index) => (
                     <motion.div
                       key={product.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: index * 0.05 }} // Faster animation
+                      transition={{ duration: 0.4, delay: index * 0.05 }}
                       className="h-full"
                     >
                       <Card className="hover:shadow-medium transition-all duration-300 bg-white border h-full flex flex-col">
-                        <CardContent className="p-3 flex flex-col flex-grow"> {/* Smaller padding */}
-                          {/* Product Image - Smaller and compact */}
+                        <CardContent className="p-3 flex flex-col flex-grow">
                           <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center relative mb-3">
                             {product.image_url ? (
                               <img
@@ -252,10 +300,9 @@ const Store = () => {
                               />
                             ) : null}
                             <div className={`flex items-center justify-center ${product.image_url ? 'hidden' : 'flex'}`}>
-                              <Leaf className="h-8 w-8 text-green-300" /> {/* Smaller icon */}
+                              <Leaf className="h-8 w-8 text-green-300" />
                             </div>
                             
-                            {/* Badges */}
                             {product.organic && (
                               <Badge className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1 py-0">
                                 Organic
@@ -268,7 +315,6 @@ const Store = () => {
                             )}
                           </div>
 
-                          {/* Product Info - Compact layout */}
                           <div className="flex-grow space-y-2">
                             <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2">
                               {product.name}
@@ -280,7 +326,6 @@ const Store = () => {
                               {product.description}
                             </p>
                             
-                            {/* Price and Stock */}
                             <div className="flex items-center justify-between mt-auto">
                               <span className="text-sm font-bold text-green-600">
                                 ${parseFloat(product.price).toFixed(2)}/{product.unit}
@@ -291,7 +336,6 @@ const Store = () => {
                             </div>
                           </div>
 
-                          {/* Delete Button */}
                           <Button
                             onClick={() => handleDeleteProduct(product.id)}
                             disabled={loading}
@@ -375,18 +419,18 @@ const Store = () => {
                           <Input
                             placeholder="e.g., Organic Tomatoes"
                             value={newProduct.name}
-                            onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                            onChange={(e) => handleTextChange('name', e.target.value)}
                             required
                           />
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Price *</label>
                           <Input
-                            type="number"
-                            step="0.01"
+                            type="text" // Changed to text for better control
+                            inputMode="decimal" // Shows decimal keyboard on mobile
                             placeholder="0.00"
                             value={newProduct.price}
-                            onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                            onChange={handlePriceChange}
                             required
                           />
                         </div>
@@ -395,24 +439,25 @@ const Store = () => {
                           <Input
                             placeholder="e.g., lb, bunch, kg"
                             value={newProduct.unit}
-                            onChange={(e) => setNewProduct({...newProduct, unit: e.target.value})}
+                            onChange={(e) => handleTextChange('unit', e.target.value)}
                             required
                           />
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Stock</label>
                           <Input
-                            type="number"
+                            type="text" // Changed to text for better control
+                            inputMode="numeric" // Shows number keyboard on mobile
                             placeholder="0"
                             value={newProduct.stock}
-                            onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+                            onChange={handleStockChange}
                           />
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Category</label>
                           <select
                             value={newProduct.category}
-                            onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                            onChange={(e) => handleTextChange('category', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
                             {categories.map(category => (
@@ -425,7 +470,7 @@ const Store = () => {
                           <Input
                             type="date"
                             value={newProduct.harvest_date}
-                            onChange={(e) => setNewProduct({...newProduct, harvest_date: e.target.value})}
+                            onChange={(e) => handleTextChange('harvest_date', e.target.value)}
                           />
                         </div>
                       </div>
@@ -435,7 +480,7 @@ const Store = () => {
                         <Textarea
                           placeholder="Describe your product..."
                           value={newProduct.description}
-                          onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                          onChange={(e) => handleTextChange('description', e.target.value)}
                           required
                         />
                       </div>
@@ -445,7 +490,7 @@ const Store = () => {
                           type="checkbox"
                           id="organic"
                           checked={newProduct.organic}
-                          onChange={(e) => setNewProduct({...newProduct, organic: e.target.checked})}
+                          onChange={(e) => handleTextChange('organic', e.target.checked)}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                         <label htmlFor="organic" className="text-sm font-medium">

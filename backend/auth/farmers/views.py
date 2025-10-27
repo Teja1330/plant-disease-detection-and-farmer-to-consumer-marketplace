@@ -76,7 +76,7 @@ def get_farmer_instance(user):
     except Farmer.DoesNotExist:
         return None
 
-# farmers/views.py - Update the ProductListView post method
+
 @method_decorator(csrf_exempt, name='dispatch')
 class ProductListView(APIView):
     permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
@@ -109,25 +109,33 @@ class ProductListView(APIView):
                 }, status=404)
             
             print(f"🔍 Using farmer: {farmer_instance.name} (ID: {farmer_instance.id})")
+            print(f"🔍 Request data: {request.data}")
+            print(f"🔍 Request files: {request.FILES}")
             
-            # Create a copy of the request data
+            # Prepare data for serializer
             data = request.data.copy()
             
-            # Remove farmer from data since we'll set it in the serializer context
-            # This prevents the serializer from trying to use the ID directly
+            # Remove farmer from data since we'll set it in context
             if 'farmer' in data:
                 del data['farmer']
             
-            print("🔍 Data for serializer:", data)
-            
-            # Pass the farmer instance in the context
-            serializer = ProductSerializer(data=data, context={'farmer': farmer_instance})
+            # Create serializer with request context for file handling
+            serializer = ProductSerializer(
+                data=data, 
+                context={
+                    'farmer': farmer_instance,
+                    'request': request
+                }
+            )
             
             if serializer.is_valid():
                 print("✅ Serializer is valid, creating product...")
                 product = serializer.save()
                 print(f"✅ Product created successfully - ID: {product.id}")
-                return Response(ProductSerializer(product).data, status=201)
+                
+                # Return the created product with image URL
+                response_data = ProductSerializer(product).data
+                return Response(response_data, status=201)
             else:
                 print("❌ Serializer errors:", serializer.errors)
                 return Response({
