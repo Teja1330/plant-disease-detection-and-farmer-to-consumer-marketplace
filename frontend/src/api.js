@@ -81,3 +81,33 @@ export const plantDetectionAPI = {
     }
   }
 };
+
+// api.js - Add farmer API endpoints
+export const farmerAPI = {
+  // Dashboard
+  getDashboard: () => {
+    return API.get('/farmer/dashboard/');
+  },
+
+  // Products
+  getProducts: () => {
+    return API.get('/farmer/products/');
+  },
+
+  createProduct: (productData) => {
+    return API.post('/farmer/products/', productData);
+  },
+
+  deleteProduct: (productId) => {
+    return API.delete(`/farmer/products/${productId}/`);
+  },
+
+  // Orders
+  getOrders: () => {
+    return API.get('/farmer/orders/');
+  },
+
+  updateOrderStatus: (orderId, status) => {
+    return API.patch(`/farmer/orders/${orderId}/`, { status });
+  }
+};

@@ -28,6 +28,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('users.urls')),
     path('api/plant/', include('plant_detection.urls')),
+    path('api/farmer/', include('farmers.urls')),  
 ]
 
 if settings.DEBUG:

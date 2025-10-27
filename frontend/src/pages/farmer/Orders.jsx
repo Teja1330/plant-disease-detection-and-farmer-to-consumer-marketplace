@@ -17,99 +17,66 @@ import {
   Phone,
   Mail,
   DollarSign,
-  User
+  User,
+  RefreshCw
 } from "lucide-react";
 import { handleScroll } from "@/components/Navbar";
-
+import { useToast } from "@/hooks/use-toast";
+import { farmerAPI } from "@/api";
 
 const Orders = () => {
-  useEffect(() => {
-        handleScroll();
-      }, []);
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [orders, setOrders] = useState([
-    {
-      id: "ORD-2024-001",
-      customerName: "John Smith",
-      customerEmail: "john.smith@email.com",
-      customerPhone: "+1 (555) 123-4567",
-      orderDate: "2024-01-25",
-      deliveryDate: "2024-01-27",
-      status: "pending",
-      total: 12.48,
-      address: "123 Main St, Cityville, ST 12345",
-      items: [
-        { name: "Organic Tomatoes", quantity: 2, unit: "lbs", price: 4.99 },
-        { name: "Fresh Basil", quantity: 1, unit: "bunch", price: 2.50 }
-      ]
-    },
-    {
-      id: "ORD-2024-002",
-      customerName: "Sarah Johnson",
-      customerEmail: "sarah.j@email.com",
-      customerPhone: "+1 (555) 234-5678",
-      orderDate: "2024-01-24",
-      deliveryDate: "2024-01-26",
-      status: "processing",
-      total: 13.98,
-      address: "456 Oak Ave, Townsburg, ST 23456",
-      items: [
-        { name: "Sweet Corn", quantity: 1, unit: "dozen", price: 6.00 },
-        { name: "Bell Peppers", quantity: 2, unit: "lbs", price: 3.99 }
-      ]
-    },
-    {
-      id: "ORD-2024-003",
-      customerName: "Mike Davis",
-      customerEmail: "mike.davis@email.com",
-      customerPhone: "+1 (555) 345-6789",
-      orderDate: "2024-01-23",
-      deliveryDate: "2024-01-25",
-      status: "completed",
-      total: 7.00,
-      address: "789 Pine Rd, Villagetown, ST 34567",
-      items: [
-        { name: "Fresh Spinach", quantity: 2, unit: "bunches", price: 3.50 }
-      ]
-    },
-    {
-      id: "ORD-2024-004",
-      customerName: "Lisa Wilson",
-      customerEmail: "lisa.w@email.com",
-      customerPhone: "+1 (555) 456-7890",
-      orderDate: "2024-01-22",
-      deliveryDate: "2024-01-24",
-      status: "completed",
-      total: 18.47,
-      address: "321 Elm St, Hamletville, ST 45678",
-      items: [
-        { name: "Organic Tomatoes", quantity: 3, unit: "lbs", price: 4.99 },
-        { name: "Sweet Corn", quantity: 1, unit: "dozen", price: 6.00 },
-        { name: "Fresh Basil", quantity: 1, unit: "bunch", price: 2.50 }
-      ]
-    },
-    {
-      id: "ORD-2024-005",
-      customerName: "Robert Brown",
-      customerEmail: "r.brown@email.com",
-      customerPhone: "+1 (555) 567-8901",
-      orderDate: "2024-01-21",
-      deliveryDate: "2024-01-23",
-      status: "cancelled",
-      total: 9.48,
-      address: "654 Maple Dr, Countryside, ST 56789",
-      items: [
-        { name: "Bell Peppers", quantity: 1, unit: "lb", price: 3.99 },
-        { name: "Fresh Spinach", quantity: 1, unit: "bunch", price: 3.50 },
-        { name: "Organic Carrots", quantity: 1, unit: "lb", price: 1.99 }
-      ]
-    }
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [updatingOrder, setUpdatingOrder] = useState(null);
 
-  const updateOrderStatus = (orderId, newStatus) => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
+  useEffect(() => {
+    handleScroll();
+    loadOrders();
+  }, []);
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await farmerAPI.getOrders();
+      setOrders(response.data);
+    } catch (error) {
+      console.error("Failed to load orders:", error);
+      toast({
+        title: "Failed to load orders",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      setUpdatingOrder(orderId);
+      await farmerAPI.updateOrderStatus(orderId, newStatus);
+      
+      setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ));
+      
+      toast({
+        title: "Order Updated",
+        description: `Order status changed to ${newStatus}`,
+        variant: "success"
+      });
+    } catch (error) {
+      console.error("Failed to update order:", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update order status",
+        variant: "destructive"
+      });
+    } finally {
+      setUpdatingOrder(null);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -143,8 +110,8 @@ const Orders = () => {
   };
 
   const filteredOrders = orders.filter(order => 
-    order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.id.toLowerCase().includes(searchQuery.toLowerCase())
+    order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    order.order_id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getOrdersByStatus = (status) => {
@@ -170,15 +137,15 @@ const Orders = () => {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <CardTitle className="text-lg">{order.id}</CardTitle>
+              <CardTitle className="text-lg">{order.order_id}</CardTitle>
               <div className="flex items-center space-x-4 text-sm text-gray-500">
                 <div className="flex items-center space-x-1">
                   <Calendar className="h-4 w-4" />
-                  <span>Ordered {new Date(order.orderDate).toLocaleDateString()}</span>
+                  <span>Ordered {new Date(order.order_date).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center space-x-1">
                   <DollarSign className="h-4 w-4" />
-                  <span>${order.total.toFixed(2)}</span>
+                  <span>${parseFloat(order.total_amount).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -196,15 +163,15 @@ const Orders = () => {
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-blue-600" />
-                  <span className="font-semibold">{order.customerName}</span>
+                  <span className="font-semibold">{order.customer_name}</span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <Mail className="h-4 w-4" />
-                  <span>{order.customerEmail}</span>
+                  <span>{order.customer_email}</span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <Phone className="h-4 w-4" />
-                  <span>{order.customerPhone}</span>
+                  <span>{order.customer_phone}</span>
                 </div>
               </div>
               <div className="space-y-2">
@@ -213,7 +180,7 @@ const Orders = () => {
                   <span className="text-sm text-gray-500">{order.address}</span>
                 </div>
                 <div className="text-sm text-gray-500">
-                  Delivery: {new Date(order.deliveryDate).toLocaleDateString()}
+                  Delivery: {new Date(order.delivery_date).toLocaleDateString()}
                 </div>
               </div>
             </div>
@@ -225,10 +192,10 @@ const Orders = () => {
             {order.items.map((item, itemIndex) => (
               <div key={itemIndex} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-0">
                 <div>
-                  <span className="font-medium">{item.name}</span>
-                  <span className="text-gray-500 ml-2">({item.quantity} {item.unit})</span>
+                  <span className="font-medium">{item.product_name}</span>
+                  <span className="text-gray-500 ml-2">({item.quantity} units)</span>
                 </div>
-                <span className="font-semibold">${(item.price * item.quantity).toFixed(2)}</span>
+                <span className="font-semibold">${(item.unit_price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
           </div>
@@ -251,9 +218,14 @@ const Orders = () => {
                 <Button 
                   size="sm" 
                   onClick={() => updateOrderStatus(order.id, 'processing')}
+                  disabled={updatingOrder === order.id}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  Accept Order
+                  {updatingOrder === order.id ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    "Accept Order"
+                  )}
                 </Button>
               </div>
             )}
@@ -263,9 +235,14 @@ const Orders = () => {
                 <Button 
                   size="sm" 
                   onClick={() => updateOrderStatus(order.id, 'completed')}
+                  disabled={updatingOrder === order.id}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  Mark Complete
+                  {updatingOrder === order.id ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    "Mark Complete"
+                  )}
                 </Button>
               </div>
             )}
@@ -285,10 +262,23 @@ const Orders = () => {
           transition={{ duration: 0.8 }}
           className="space-y-4 mb-8"
         >
-          <h1 className="text-4xl font-bold text-gray-900">Order Management</h1>
-          <p className="text-lg text-gray-600">
-            Track and manage all your customer orders
-          </p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900">Order Management</h1>
+              <p className="text-lg text-gray-600">
+                Track and manage all your customer orders
+              </p>
+            </div>
+            <Button
+              onClick={loadOrders}
+              disabled={loading}
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </motion.div>
 
         {/* Order Stats */}
@@ -364,81 +354,88 @@ const Orders = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
         >
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-8 bg-gray-100 p-1 rounded-lg">
-              <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                All ({orderStats.total})
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                Pending ({orderStats.pending})
-              </TabsTrigger>
-              <TabsTrigger value="processing" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                Processing ({orderStats.processing})
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                Completed ({orderStats.completed})
-              </TabsTrigger>
-              <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                Cancelled ({orderStats.cancelled})
-              </TabsTrigger>
-            </TabsList>
+          {loading ? (
+            <div className="text-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-lg text-gray-600">Loading orders...</p>
+            </div>
+          ) : (
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-8 bg-gray-100 p-1 rounded-lg">
+                <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  All ({orderStats.total})
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  Pending ({orderStats.pending})
+                </TabsTrigger>
+                <TabsTrigger value="processing" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  Processing ({orderStats.processing})
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  Completed ({orderStats.completed})
+                </TabsTrigger>
+                <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  Cancelled ({orderStats.cancelled})
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="all" className="space-y-6">
-              {getOrdersByStatus('all').map((order, index) => (
-                <OrderCard key={order.id} order={order} index={index} />
-              ))}
-            </TabsContent>
+              <TabsContent value="all" className="space-y-6">
+                {getOrdersByStatus('all').map((order, index) => (
+                  <OrderCard key={order.id} order={order} index={index} />
+                ))}
+              </TabsContent>
 
-            <TabsContent value="pending" className="space-y-6">
-              {getOrdersByStatus('pending').map((order, index) => (
-                <OrderCard key={order.id} order={order} index={index} />
-              ))}
-            </TabsContent>
+              <TabsContent value="pending" className="space-y-6">
+                {getOrdersByStatus('pending').map((order, index) => (
+                  <OrderCard key={order.id} order={order} index={index} />
+                ))}
+              </TabsContent>
 
-            <TabsContent value="processing" className="space-y-6">
-              {getOrdersByStatus('processing').map((order, index) => (
-                <OrderCard key={order.id} order={order} index={index} />
-              ))}
-            </TabsContent>
+              <TabsContent value="processing" className="space-y-6">
+                {getOrdersByStatus('processing').map((order, index) => (
+                  <OrderCard key={order.id} order={order} index={index} />
+                ))}
+              </TabsContent>
 
-            <TabsContent value="completed" className="space-y-6">
-              {getOrdersByStatus('completed').map((order, index) => (
-                <OrderCard key={order.id} order={order} index={index} />
-              ))}
-            </TabsContent>
+              <TabsContent value="completed" className="space-y-6">
+                {getOrdersByStatus('completed').map((order, index) => (
+                  <OrderCard key={order.id} order={order} index={index} />
+                ))}
+              </TabsContent>
 
-            <TabsContent value="cancelled" className="space-y-6">
-              {getOrdersByStatus('cancelled').map((order, index) => (
-                <OrderCard key={order.id} order={order} index={index} />
-              ))}
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="cancelled" className="space-y-6">
+                {getOrdersByStatus('cancelled').map((order, index) => (
+                  <OrderCard key={order.id} order={order} index={index} />
+                ))}
+              </TabsContent>
+            </Tabs>
+          )}
+
+          {/* Empty State */}
+          {!loading && filteredOrders.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="text-center py-16"
+            >
+              <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No orders found</h3>
+              <p className="text-gray-600 mb-6">
+                {searchQuery ? "Try adjusting your search criteria" : "Orders will appear here once customers start buying your products"}
+              </p>
+              {searchQuery && (
+                <Button 
+                  onClick={() => setSearchQuery('')}
+                  variant="outline"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                >
+                  Clear Search
+                </Button>
+              )}
+            </motion.div>
+          )}
         </motion.div>
-
-        {/* Empty State */}
-        {filteredOrders.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center py-16"
-          >
-            <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No orders found</h3>
-            <p className="text-gray-600 mb-6">
-              {searchQuery ? "Try adjusting your search criteria" : "Orders will appear here once customers start buying your products"}
-            </p>
-            {searchQuery && (
-              <Button 
-                onClick={() => setSearchQuery('')}
-                variant="outline"
-                className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
-              >
-                Clear Search
-              </Button>
-            )}
-          </motion.div>
-        )}
       </div>
     </div>
   );
