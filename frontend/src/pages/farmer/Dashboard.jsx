@@ -273,7 +273,7 @@ const Dashboard = () => {
                   Take advantage of our tools to increase your sales and reach more customers.
                 </p>
                 
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-2 gap-8">
                   <Link to="/farmer/store">
                     <Button 
                       variant="outline" 
@@ -294,15 +294,7 @@ const Dashboard = () => {
                     </Button>
                   </Link>
                   
-                  <Link to="/farmer/reports">
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-white text-primary hover:bg-white hover:text-primary"
-                    >
-                      <BarChart3 className="h-4 w-4 mr-2" />
-                      View Reports
-                    </Button>
-                  </Link>
+                  
                 </div>
               </div>
             </CardContent>

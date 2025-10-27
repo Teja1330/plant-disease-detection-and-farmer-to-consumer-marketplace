@@ -44,7 +44,6 @@ const Navbar = () => {
     { to: "/farmer", label: "Dashboard", icon: Home },
     { to: "/farmer/store", label: "Store", icon: ShoppingBag },
     { to: "/farmer/detection", label: "Detection", icon: Camera },
-    { to: "/farmer/reports", label: "Reports", icon: ClipboardList },
     { to: "/farmer/orders", label: "Orders", icon: Package },
   ];
 
