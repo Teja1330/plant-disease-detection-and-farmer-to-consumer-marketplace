@@ -12,41 +12,41 @@ from .models import PlantDetectionResult
 from .serializers import PlantDetectionResultSerializer, PlantDetectionRequestSerializer
 from users.permissions import IsFarmerOrMultiAccount, IsAuthenticatedWithJWT
 
+
 @method_decorator(csrf_exempt, name='dispatch')
 class PlantDetectionView(APIView):
     permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
 
     def post(self, request):
         try:
-            # Debug: Check user information
             print(f"🔍 User ID: {request.user.id}")
             print(f"🔍 User Email: {request.user.email}")
-            print(f"🔍 User Role: {getattr(request.user, 'role', 'No role')}")
-            print(f"🔍 Has farmer: {getattr(request.user, 'has_farmer', False)}")
             
-            # Validate the request
             serializer = PlantDetectionRequestSerializer(data=request.data)
             if not serializer.is_valid():
                 return Response({'detail': 'Invalid data', 'errors': serializer.errors}, status=400)
 
             image_file = request.FILES['image']
             
-            # Validate file type
+            # Validate file type and size
             if not image_file.content_type.startswith('image/'):
                 return Response({'detail': 'File must be an image'}, status=400)
             
-            # Validate file size (max 10MB)
             if image_file.size > 10 * 1024 * 1024:
                 return Response({'detail': 'File size too large. Maximum 10MB allowed.'}, status=400)
 
             temp_path = None
             try:
-                # Create a temporary file
+                # Create temporary file for processing
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
                     for chunk in image_file.chunks():
                         temp_file.write(chunk)
                     temp_path = temp_file.name
 
+                # Read image data for database storage
+                image_file.seek(0)  # Reset file pointer
+                image_data = image_file.read()
+                
                 # Initialize detector and make prediction
                 detector = PlantDiseaseDetector()
                 result = detector.predict(temp_path)
@@ -54,12 +54,14 @@ class PlantDetectionView(APIView):
                 if 'error' in result:
                     return Response({'detail': result['error']}, status=400)
 
-                # Save the result to database with user information
+                # Save the result to database with image as binary data
                 detection_result = PlantDetectionResult.objects.create(
                     user_id=request.user.id,
                     user_email=request.user.email,
                     user_type=getattr(request.user, 'role', 'unknown'),
-                    image=image_file,
+                    image_data=image_data,
+                    image_name=image_file.name,
+                    image_content_type=image_file.content_type,
                     prediction=result['prediction'],
                     confidence=result['confidence']
                 )
@@ -70,7 +72,7 @@ class PlantDetectionView(APIView):
                     'prediction': result['prediction'],
                     'confidence': result['confidence'],
                     'class_index': result.get('class_index', 0),
-                    'top_predictions': result.get('top_predictions', [])[:3]  # Only top 3
+                    'top_predictions': result.get('top_predictions', [])[:3]
                 })
 
                 return Response(response_data)
@@ -84,20 +86,36 @@ class PlantDetectionView(APIView):
             print(f"❌ Detection error: {str(e)}")
             return Response({'detail': f'Detection failed: {str(e)}'}, status=400)
 
+
 @method_decorator(csrf_exempt, name='dispatch')
+class DetectionHistoryView(APIView):
+    permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
+
+
+    # plant_detection/views.py - Update DetectionHistoryView
 class DetectionHistoryView(APIView):
     permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
 
     def get(self, request):
         try:
-            # Filter by user_id
+            print(f"🔍 Fetching history for user_id: {request.user.id}")
+            print(f"🔍 User email: {request.user.email}")
+            
+            # Filter by user_id - make sure this is correct
             history = PlantDetectionResult.objects.filter(user_id=request.user.id).order_by('-created_at')
+            
+            print(f"📊 Found {history.count()} records for user {request.user.id}")
+            
+            for item in history:
+                print(f"📄 Item {item.id}: user_id={item.user_id}, prediction={item.prediction}")
+            
             serializer = PlantDetectionResultSerializer(history, many=True)
             return Response(serializer.data)
+            
         except Exception as e:
             print(f"❌ History error: {str(e)}")
             return Response({'detail': f'Failed to fetch history: {str(e)}'}, status=400)
-    
+
     def delete(self, request, detection_id=None):
         try:
             if detection_id:
@@ -112,6 +130,7 @@ class DetectionHistoryView(APIView):
         except Exception as e:
             print(f"❌ Delete error: {str(e)}")
             return Response({'detail': f'Failed to delete: {str(e)}'}, status=400)
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class TestAuthView(APIView):

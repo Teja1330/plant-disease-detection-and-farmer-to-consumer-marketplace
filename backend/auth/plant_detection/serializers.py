@@ -7,13 +7,11 @@ class PlantDetectionResultSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = PlantDetectionResult
-        fields = ['id', 'image', 'image_url', 'prediction', 'confidence', 'created_at', 'user_id', 'user_email', 'user_type']
+        fields = ['id', 'image_url', 'prediction', 'confidence', 'created_at', 'user_id', 'user_email', 'user_type']
         read_only_fields = ['id', 'created_at', 'user_id', 'user_email', 'user_type', 'image_url']
     
     def get_image_url(self, obj):
-        if obj.image:
-            return obj.image.url
-        return None
+        return obj.image_url
 
 class PlantDetectionRequestSerializer(serializers.Serializer):
     image = serializers.ImageField(
@@ -23,12 +21,10 @@ class PlantDetectionRequestSerializer(serializers.Serializer):
     )
     
     def validate_image(self, value):
-        # Validate file size (max 10MB)
         max_size = 10 * 1024 * 1024  # 10MB
         if value.size > max_size:
             raise serializers.ValidationError("Image size too large. Maximum 10MB allowed.")
         
-        # Validate file type
         valid_extensions = ['jpg', 'jpeg', 'png', 'bmp']
         extension = value.name.split('.')[-1].lower()
         if extension not in valid_extensions:

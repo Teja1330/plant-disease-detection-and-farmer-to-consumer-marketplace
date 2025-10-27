@@ -9,40 +9,46 @@ const API = axios.create({
   timeout: 10000,
 });
 
-// Add token from localStorage to all requests
+// In your api.js - Add more debugging
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log(`🔐 Making ${config.method?.toUpperCase()} request to:`, config.url);
+      console.log('🔑 Token present:', !!token);
+    } else {
+      console.warn('⚠️ No auth token found for request:', config.url);
     }
-    console.log(`Making ${config.method?.toUpperCase()} request to:`, config.url);
-    console.log('Auth header:', config.headers.Authorization ? 'Set' : 'Not set');
     return config;
   },
   (error) => {
-    console.error('Request error:', error);
+    console.error('❌ Request error:', error);
     return Promise.reject(error);
   }
 );
 
-// api.js - Update the response interceptor
 API.interceptors.response.use(
   (response) => {
-    console.log('Response received:', response.status, response.data);
+    console.log('✅ Response received:', {
+      status: response.status,
+      url: response.config.url,
+      data: response.data
+    });
     return response;
   },
   (error) => {
-    console.error('Response error:', error);
+    console.error('❌ Response error:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      data: error.response?.data,
+      message: error.message
+    });
     
-    // Only remove token for 401 (Unauthorized), not for 403 (Forbidden)
     if (error.response?.status === 401) {
-      // Token expired or invalid
       localStorage.removeItem('auth_token');
-      console.log('Token removed due to auth error');
+      console.log('🔑 Token removed due to auth error');
     }
-    // For 403 (Forbidden), don't logout - just show error
-    // This could be due to role restrictions, not auth issues
     
     return Promise.reject(error);
   }
