@@ -1,22 +1,24 @@
-﻿import { useState, useEffect } from "react";
+﻿// Marketplace.jsx - Updated version
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  Filter, 
-  Star, 
-  MapPin, 
-  Clock, 
-  ShoppingCart, 
+import {
+  Search,
+  Filter,
+  Star,
+  MapPin,
+  Clock,
+  ShoppingCart,
   Leaf,
   Grid3X3,
   List
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { handleScroll } from "@/components/Navbar";
+import { customerAPI } from "@/api";
 
 const Marketplace = () => {
   const { toast } = useToast();
@@ -24,124 +26,50 @@ const Marketplace = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [cart, setCart] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [customerPincode, setCustomerPincode] = useState("");
+  const [customerDistrict, setCustomerDistrict] = useState("");
+
 
   useEffect(() => {
     handleScroll();
     // Load cart from localStorage on component mount
     const savedCart = JSON.parse(localStorage.getItem('cart')) || [];
     setCart(savedCart);
+    loadMarketplaceProducts();
   }, []);
 
-  const products = [
-    {
-      id: 1,
-      name: "Organic Tomatoes",
-      farmer: "Green Valley Farm",
-      price: 4.99,
-      unit: "lb",
-      rating: 4.8,
-      reviewCount: 120,
-      image: "/placeholder.svg",
-      location: "15 miles away",
-      harvestDate: "2 days ago",
-      category: "Vegetables",
-      organic: true,
-      inStock: true,
-      description: "Fresh, vine-ripened organic tomatoes perfect for salads and cooking."
-    },
-    {
-      id: 2,
-      name: "Fresh Spinach",
-      farmer: "Sunny Acres",
-      price: 3.50,
-      unit: "bunch",
-      rating: 4.9,
-      reviewCount: 85,
-      image: "/placeholder.svg",
-      location: "8 miles away",
-      harvestDate: "1 day ago",
-      category: "Leafy Greens",
-      organic: true,
-      inStock: true,
-      description: "Baby spinach leaves, perfect for salads and smoothies."
-    },
-    {
-      id: 3,
-      name: "Sweet Corn",
-      farmer: "Prairie Fields",
-      price: 6.00,
-      unit: "dozen",
-      rating: 4.7,
-      reviewCount: 64,
-      image: "/placeholder.svg",
-      location: "12 miles away",
-      harvestDate: "Today",
-      category: "Vegetables",
-      organic: false,
-      inStock: true,
-      description: "Sweet, tender corn on the cob, freshly picked this morning."
-    },
-    {
-      id: 4,
-      name: "Baby Carrots",
-      farmer: "Earth Garden",
-      price: 2.99,
-      unit: "lb",
-      rating: 4.6,
-      reviewCount: 45,
-      image: "/placeholder.svg",
-      location: "20 miles away",
-      harvestDate: "1 day ago",
-      category: "Root Vegetables",
-      organic: true,
-      inStock: false,
-      description: "Sweet baby carrots, perfect for snacking or cooking."
-    },
-    {
-      id: 5,
-      name: "Bell Peppers Mix",
-      farmer: "Rainbow Gardens",
-      price: 3.99,
-      unit: "2 lbs",
-      rating: 4.8,
-      reviewCount: 90,
-      image: "/placeholder.svg",
-      location: "18 miles away",
-      harvestDate: "1 day ago",
-      category: "Vegetables",
-      organic: true,
-      inStock: true,
-      description: "Colorful mix of red, yellow, and green bell peppers."
-    },
-    {
-      id: 6,
-      name: "Fresh Basil",
-      farmer: "Herb Haven",
-      price: 2.50,
-      unit: "bunch",
-      rating: 4.9,
-      reviewCount: 50,
-      image: "/placeholder.svg",
-      location: "10 miles away",
-      harvestDate: "Today",
-      category: "Herbs",
-      organic: true,
-      inStock: true,
-      description: "Aromatic fresh basil, perfect for pasta, pizza, and salads."
+  // In the loadMarketplaceProducts function, update:
+  const loadMarketplaceProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await customerAPI.getMarketplaceProducts();
+      setProducts(response.data.products || []);
+      setCustomerDistrict(response.data.customer_district || ""); // FIX: customer_district not customerDistrict
+    } catch (error) {
+      console.error("Failed to load marketplace products:", error);
+      toast({
+        title: "Failed to load products",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const categories = ["All", "Vegetables", "Fruits", "Leafy Greens", "Root Vegetables", "Herbs"];
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.farmer.toLowerCase().includes(searchQuery.toLowerCase());
+      product.farmer_name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const handleAddToCart = (product) => {
-    if (!product.inStock) {
+    if (product.stock === 0) {
       toast({
         title: "Out of Stock",
         description: `${product.name} is currently out of stock.`,
@@ -180,11 +108,10 @@ const Marketplace = () => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`h-4 w-4 ${
-          i < Math.floor(rating)
-            ? "fill-yellow-400 text-yellow-400"
-            : "text-gray-300"
-        }`}
+        className={`h-4 w-4 ${i < Math.floor(rating)
+          ? "fill-yellow-400 text-yellow-400"
+          : "text-gray-300"
+          }`}
       />
     ));
   };
@@ -196,19 +123,26 @@ const Marketplace = () => {
       transition={{ duration: 0.6, delay: index * 0.1 }}
     >
       <Card
-        className={`hover:shadow-lg transition-all duration-300 bg-white border border-gray-200 ${
-          !product.inStock ? "opacity-60" : ""
-        }`}
+        className={`hover:shadow-lg transition-all duration-300 bg-white border border-gray-200 ${product.stock === 0 ? "opacity-60" : ""
+          }`}
       >
         <CardContent className="p-0">
           <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center relative">
-            <Leaf className="h-12 w-12 text-green-300" />
+            {product.image_url ? (
+              <img
+                src={product.image_url}
+                alt={product.name}
+                className="w-full h-full object-cover rounded-t-lg"
+              />
+            ) : (
+              <Leaf className="h-12 w-12 text-green-300" />
+            )}
             {product.organic && (
               <Badge className="absolute top-2 left-2 bg-green-500 text-white text-xs">
                 Organic
               </Badge>
             )}
-            {!product.inStock && (
+            {product.stock === 0 && (
               <Badge className="absolute top-2 right-2 bg-red-500 text-white text-xs">
                 Out of Stock
               </Badge>
@@ -217,15 +151,12 @@ const Marketplace = () => {
           <div className="p-4 space-y-3">
             <div>
               <h3 className="font-semibold text-gray-900">{product.name}</h3>
-              <p className="text-sm text-gray-600">{product.farmer}</p>
+              <p className="text-sm text-gray-600">{product.farmer_name}</p>
             </div>
 
             <div className="flex items-center space-x-1">
-              <div className="flex">{renderStars(product.rating)}</div>
-              <span className="text-sm font-medium">{product.rating}</span>
-              <span className="text-xs text-gray-500">
-                ({product.reviewCount})
-              </span>
+              <div className="flex">{renderStars(product.rating || 4.5)}</div>
+              <span className="text-sm font-medium">{product.rating || 4.5}</span>
             </div>
 
             <p className="text-sm text-gray-600 line-clamp-2">
@@ -235,26 +166,26 @@ const Marketplace = () => {
             <div className="space-y-1">
               <div className="flex items-center text-xs text-gray-500">
                 <MapPin className="h-3 w-3 mr-1" />
-                {product.location}
+                {product.farmer_district ? `${product.farmer_city}, ${product.farmer_district}` : 'Location not available'}
               </div>
               <div className="flex items-center text-xs text-gray-500">
                 <Clock className="h-3 w-3 mr-1" />
-                Harvested {product.harvestDate}
+                Harvested {new Date(product.harvest_date).toLocaleDateString()}
               </div>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-lg font-bold text-green-600">
-                ${product.price.toFixed(2)}/{product.unit}
+                ${parseFloat(product.price).toFixed(2)}/{product.unit}
               </span>
               <Button
                 size="sm"
                 className="bg-green-600 hover:bg-green-700"
-                disabled={!product.inStock}
+                disabled={product.stock === 0}
                 onClick={() => handleAddToCart(product)}
               >
                 <ShoppingCart className="h-4 w-4 mr-1" />
-                {product.inStock ? "Add" : "Out"}
+                {product.stock === 0 ? "Out" : "Add"}
               </Button>
             </div>
           </div>
@@ -275,7 +206,7 @@ const Marketplace = () => {
         >
           <h1 className="text-4xl font-bold text-gray-900">Marketplace</h1>
           <p className="text-lg text-gray-600">
-            Fresh produce directly from local farmers
+            Fresh produce directly from local farmers {customerPincode && `in ${customerPincode}`}
           </p>
         </motion.div>
 
@@ -316,9 +247,9 @@ const Marketplace = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="border-gray-300 text-gray-700 hover:bg-gray-100"
                 onClick={() => toast({
                   title: "More Filters",
@@ -363,24 +294,34 @@ const Marketplace = () => {
             Showing {filteredProducts.length} products
             {selectedCategory !== "All" && ` in ${selectedCategory}`}
             {searchQuery && ` matching "${searchQuery}"`}
+            {customerDistrict && ` from farmers in ${customerDistrict}`} {/* FIX: customerDistrict */}
           </p>
         </motion.div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+            <p className="mt-4 text-lg text-gray-600">Loading fresh products...</p>
+          </div>
+        )}
+
         {/* Product Grid */}
-        <div
-          className={`grid gap-6 ${
-            viewMode === "grid"
+        {!loading && (
+          <div
+            className={`grid gap-6 ${viewMode === "grid"
               ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
               : "grid-cols-1"
-          }`}
-        >
-          {filteredProducts.map((product, index) => (
-            <ProductCard key={product.id} product={product} index={index} />
-          ))}
-        </div>
+              }`}
+          >
+            {filteredProducts.map((product, index) => (
+              <ProductCard key={product.id} product={product} index={index} />
+            ))}
+          </div>
+        )}
 
         {/* No Results */}
-        {filteredProducts.length === 0 && (
+        {!loading && filteredProducts.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -392,45 +333,19 @@ const Marketplace = () => {
               No products found
             </h3>
             <p className="text-gray-600 mb-6">
-              Try adjusting your search or filter criteria
+              {customerDistrict
+                ? `No products found from farmers in ${customerDistrict}. Try adjusting your search.`
+                : "Try adjusting your search or filter criteria"}
             </p>
             <Button
               onClick={() => {
                 setSearchQuery("");
                 setSelectedCategory("All");
-                toast({
-                  title: "Filters cleared",
-                  description: "All search filters have been reset.",
-                  variant: "success"
-                });
               }}
               variant="outline"
               className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
             >
               Clear Filters
-            </Button>
-          </motion.div>
-        )}
-
-        {/* Load More Button */}
-        {filteredProducts.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mt-12"
-          >
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
-              onClick={() => toast({
-                title: "More Products",
-                description: "Loading additional products...",
-                variant: "default"
-              })}
-            >
-              Load More Products
             </Button>
           </motion.div>
         )}

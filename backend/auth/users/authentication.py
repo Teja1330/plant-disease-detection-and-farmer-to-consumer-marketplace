@@ -47,7 +47,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
         if not user:
             raise AuthenticationFailed('User not found')
         
-        # Add role information to user object
+        # Add role information to user object from JWT payload
         user.role = payload.get('role', '')
         user.has_farmer = payload.get('has_farmer', False)
         user.has_customer = payload.get('has_customer', False)

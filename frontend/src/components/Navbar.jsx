@@ -12,11 +12,32 @@ import {
   Camera,
 } from "lucide-react";
 import ProfileDropdown from "./ProfileDropdown";
+import { useEffect, useState } from "react";
+
 
 const Navbar = () => {
   const { user, logout } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
+  const [userName, setUserName] = useState(''); // ADD STATE
+
+  useEffect(() => {
+    if (user?.name) {
+      setUserName(user.name);
+    } else {
+      // Try to get from localStorage or make API call
+      const storedUser = localStorage.getItem('user_data');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          setUserName(userData.name || 'User');
+        } catch (e) {
+          setUserName('User');
+        }
+      }
+    }
+  }, [user]);
+
 
   const handleLogout = async () => {
     await logout();
@@ -68,9 +89,9 @@ const Navbar = () => {
               transition={{ type: "spring", stiffness: 300 }}
               className="flex items-center space-x-3"
             >
-              <img 
-                src="/assets/leaf-logo.png" 
-                alt="AgriCare Logo" 
+              <img
+                src="/assets/leaf-logo.png"
+                alt="AgriCare Logo"
                 className="h-8 w-8 object-contain"
                 onError={(e) => {
                   console.error("Logo failed to load");
@@ -92,11 +113,10 @@ const Navbar = () => {
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-                      isActive
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${isActive
                         ? "bg-green-600 text-white shadow-md"
                         : "hover:bg-gray-100 text-gray-700"
-                    }`}
+                      }`}
                   >
                     <Icon className="h-4 w-4" />
                     <span className="text-sm font-medium">{link.label}</span>
@@ -113,13 +133,13 @@ const Navbar = () => {
                 {/* User info - Only show name if there's enough space */}
                 <div className="hidden lg:flex items-center space-x-2 text-sm">
                   <span className="text-gray-700 font-medium truncate max-w-[120px]">
-                    {user.name}
+                    {userName || user?.name || 'User'} {/* UPDATED THIS LINE */}
                   </span>
                   <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full capitalize">
-                    {user.role}
+                    {user?.role || localStorage.getItem('current_role') || 'user'} {/* UPDATED THIS LINE */}
                   </span>
                 </div>
-                
+
                 {/* Profile Dropdown */}
                 <ProfileDropdown />
               </div>

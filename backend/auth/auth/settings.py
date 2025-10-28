@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'plant_detection',
     'users',
     'farmers',
+    'customers',
 ]
 
 MIDDLEWARE = [
@@ -112,12 +113,13 @@ CSRF_TRUSTED_ORIGINS = [
 
 # REST Framework settings - DISABLE CSRF FOR API
 # Add to REST_FRAMEWORK settings
+# settings.py - Add this temporarily for debugging
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'users.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # Keep this for public endpoints
+        'rest_framework.permissions.IsAuthenticated',
     ],
 }
 

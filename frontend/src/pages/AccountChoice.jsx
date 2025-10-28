@@ -1,120 +1,138 @@
-import React, {useEffect} from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { User, Tractor, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Tractor, User, ArrowRight } from "lucide-react";
-import { useUser } from "../App";
-import { handleScroll } from "@/components/Navbar";
-
+import { useToast } from "@/hooks/use-toast";
+import { authAPI } from "@/api"; // ADD THIS IMPORT
+import { useEffect } from "react";
 
 const AccountChoice = () => {
-  useEffect(() => {
-        handleScroll();
-      }, []);
   const navigate = useNavigate();
-  const { setUser } = useUser();
+  const { toast } = useToast();
 
-  const handleAccountChoice = (role) => {
-    // Update user context with selected role
-    setUser(prev => ({
-      ...prev,
-      role: role
-    }));
-    
-    // Redirect to the selected dashboard
-    navigate(role === "farmer" ? "/farmer" : "/customer");
+  useEffect(() => {
+    // Check if user actually has both accounts
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+  }, [navigate]);
+
+  const handleAccountSelect = async (role) => {
+    try {
+      const response = await authAPI.switchAccount(role); // Use authAPI instead of API
+      
+      localStorage.setItem('auth_token', response.data.token);
+      localStorage.setItem('current_role', role);
+      
+      toast({
+        title: `Switched to ${role} account`,
+        description: `You are now logged in as a ${role}`,
+      });
+
+      // Redirect based on role
+      setTimeout(() => {
+        navigate(role === 'farmer' ? '/farmer' : '/customer');
+      }, 1000);
+
+    } catch (error) {
+      console.error("Account switch error:", error);
+      toast({
+        title: "Switch Failed",
+        description: "Failed to switch accounts. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('current_role');
+    localStorage.removeItem('user_data');
+    navigate('/login');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/5 py-12 px-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="w-full max-w-2xl"
       >
-        <Card className="shadow-2xl border-border/50 backdrop-blur-sm bg-card/95">
-          <CardHeader className="text-center space-y-4 pb-6">
-            <CardTitle className="text-2xl font-bold text-foreground">
-              Welcome Back!
-            </CardTitle>
-            <p className="text-muted-foreground">
-              Which account would you like to access?
-            </p>
-          </CardHeader>
+        <div className="text-center space-y-4 mb-8">
+          <h1 className="text-4xl font-bold text-foreground">Choose Your Account</h1>
+          <p className="text-lg text-muted-foreground">
+            You have both farmer and customer accounts. Which one would you like to use?
+          </p>
+        </div>
 
-          <CardContent className="space-y-6">
-            {/* Farmer Account */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <Card className="cursor-pointer border-2 border-border hover:border-primary transition-all duration-200 hover:shadow-lg bg-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-md">
-                        <Tractor className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">Farmer Account</h3>
-                        <p className="text-sm text-muted-foreground">Manage your farm and products</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => handleAccountChoice("farmer")}
-                      className="bg-primary hover:bg-primary/90"
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            <Card className="cursor-pointer border-2 border-border hover:border-green-500 transition-all duration-200 hover:shadow-lg bg-card h-full">
+              <CardContent className="p-8 text-center space-y-4 flex flex-col h-full">
+                <div className="mx-auto w-20 h-20 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                  <Tractor className="h-10 w-10 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-foreground">Farmer Account</h3>
+                <p className="text-muted-foreground flex-grow">
+                  Manage your products, view orders, and grow your farming business
+                </p>
+                <Button 
+                  onClick={() => handleAccountSelect('farmer')}
+                  className="bg-green-600 hover:bg-green-700 w-full"
+                >
+                  Continue as Farmer
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-            {/* Customer Account */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              <Card className="cursor-pointer border-2 border-border hover:border-primary transition-all duration-200 hover:shadow-lg bg-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-md">
-                        <User className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">Customer Account</h3>
-                        <p className="text-sm text-muted-foreground">Shop for fresh produce</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => handleAccountChoice("customer")}
-                      className="bg-primary hover:bg-primary/90"
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <Card className="cursor-pointer border-2 border-border hover:border-blue-500 transition-all duration-200 hover:shadow-lg bg-card h-full">
+              <CardContent className="p-8 text-center space-y-4 flex flex-col h-full">
+                <div className="mx-auto w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
+                  <User className="h-10 w-10 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-foreground">Customer Account</h3>
+                <p className="text-muted-foreground flex-grow">
+                  Browse fresh produce, place orders, and support local farmers
+                </p>
+                <Button 
+                  onClick={() => handleAccountSelect('customer')}
+                  className="bg-blue-600 hover:bg-blue-700 w-full"
+                >
+                  Continue as Customer
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              className="text-center"
-            >
-              <p className="text-sm text-muted-foreground">
-                You can switch between accounts anytime from your profile
-              </p>
-            </motion.div>
-          </CardContent>
-        </Card>
+        <div className="text-center">
+          <Button 
+            variant="outline" 
+            onClick={handleLogout}
+            className="border-gray-300"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Use Different Email
+          </Button>
+        </div>
       </motion.div>
     </div>
   );

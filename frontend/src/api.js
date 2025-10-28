@@ -9,14 +9,13 @@ const API = axios.create({
   timeout: 10000,
 });
 
-// In your api.js - Add more debugging
+// Request interceptor
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
       console.log(`🔐 Making ${config.method?.toUpperCase()} request to:`, config.url);
-      console.log('🔑 Token present:', !!token);
     } else {
       console.warn('⚠️ No auth token found for request:', config.url);
     }
@@ -28,12 +27,12 @@ API.interceptors.request.use(
   }
 );
 
+// Response interceptor
 API.interceptors.response.use(
   (response) => {
     console.log('✅ Response received:', {
       status: response.status,
       url: response.config.url,
-      data: response.data
     });
     return response;
   },
@@ -47,6 +46,8 @@ API.interceptors.response.use(
     
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('current_role');
+      localStorage.removeItem('user_data');
       console.log('🔑 Token removed due to auth error');
     }
     
@@ -56,7 +57,7 @@ API.interceptors.response.use(
 
 export default API;
 
-// api.js - Update plantDetectionAPI
+// Plant Detection API
 export const plantDetectionAPI = {
   detect: (imageFile) => {
     const formData = new FormData();
@@ -82,7 +83,7 @@ export const plantDetectionAPI = {
   }
 };
 
-// api.js - Add farmer API endpoints
+// Farmer API
 export const farmerAPI = {
   // Dashboard
   getDashboard: () => {
@@ -97,7 +98,7 @@ export const farmerAPI = {
   createProduct: (formData) => {
     return API.post('/farmer/products/', formData, {
       headers: {
-        'Content-Type': 'multipart/form-data', // Important for file uploads
+        'Content-Type': 'multipart/form-data',
       }
     });
   },
@@ -114,4 +115,77 @@ export const farmerAPI = {
   updateOrderStatus: (orderId, status) => {
     return API.patch(`/farmer/orders/${orderId}/`, { status });
   }
+};
+
+// Customer API
+export const customerAPI = {
+  // Marketplace
+  getMarketplaceProducts: () => {
+    return API.get('/customer/marketplace/');
+  },
+
+  // Orders
+  getOrders: () => {
+    return API.get('/customer/orders/history/');
+  },
+
+  createOrder: (orderData) => {
+    return API.post('/customer/orders/', orderData);
+  },
+
+  // Cart
+  getCart: () => {
+    return API.get('/customer/cart/');
+  },
+
+  addToCart: (productId, quantity = 1) => {
+    return API.post('/customer/cart/', { product_id: productId, quantity });
+  },
+
+  removeFromCart: (itemId) => {
+    return API.delete(`/customer/cart/${itemId}/`);
+  },
+
+  clearCart: () => {
+    return API.delete('/customer/cart/');
+  }
+};
+
+// Auth API - CORRECTED PATHS (no /users/ prefix)
+export const authAPI = {
+  logout: () => {
+    return API.post('/logout');
+  },
+  
+  switchAccount: (role) => {
+    return API.post('/switch-account/', { role });
+  },
+  
+  getCurrentUser: () => {
+    return API.get('/user');
+  }
+};
+
+// Address and Location API - CORRECTED PATHS (no /users/ prefix)
+export const addressAPI = {
+  // Update user address
+  updateAddress: (addressData) => {
+    return API.patch('/update-address/', addressData);
+  },
+
+  // Get available districts for dropdown
+  getDistricts: () => {
+    return API.get('/districts/');
+  },
+
+  // Get current user address
+  getCurrentAddress: () => {
+    return API.get('/user');
+  }
+};
+
+// Enhanced Auth API with address support
+export const enhancedAuthAPI = {
+  ...authAPI,
+  ...addressAPI
 };

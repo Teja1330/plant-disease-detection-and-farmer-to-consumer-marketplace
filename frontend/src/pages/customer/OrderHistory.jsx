@@ -1,83 +1,49 @@
-﻿import { motion } from "framer-motion";
+﻿// OrderHistory.jsx - Updated version
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Package, Clock, CheckCircle, Star, MapPin, Calendar, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { handleScroll } from "@/components/Navbar";
+import { customerAPI } from "@/api";
 
 const OrderHistory = () => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     handleScroll();
+    loadOrders();
   }, []);
+
   const { toast } = useToast();
 
-  const orders = [
-    {
-      id: "ORD-2024-001",
-      date: "2024-01-15",
-      farmer: "Green Valley Farm",
-      items: [
-        { name: "Organic Tomatoes", quantity: "2 lbs", price: 9.98 },
-        { name: "Fresh Basil", quantity: "1 bunch", price: 2.50 },
-      ],
-      total: 12.48,
-      status: "delivered",
-      deliveryDate: "2024-01-17",
-      rating: 4,
-      location: "15 miles away",
-    },
-    {
-      id: "ORD-2024-002",
-      date: "2024-01-20",
-      farmer: "Sunny Acres",
-      items: [
-        { name: "Fresh Spinach", quantity: "3 bunches", price: 10.50 },
-        { name: "Baby Carrots", quantity: "1 lb", price: 2.99 },
-      ],
-      total: 13.49,
-      status: "in-transit",
-      deliveryDate: "2024-01-22",
-      location: "8 miles away",
-    },
-    {
-      id: "ORD-2024-003",
-      date: "2024-01-25",
-      farmer: "Prairie Fields",
-      items: [
-        { name: "Sweet Corn", quantity: "1 dozen", price: 6.00 },
-        { name: "Bell Peppers", quantity: "2 lbs", price: 7.98 },
-      ],
-      total: 13.98,
-      status: "processing",
-      deliveryDate: "2024-01-27",
-      location: "12 miles away",
-    },
-    {
-      id: "ORD-2024-004",
-      date: "2024-01-10",
-      farmer: "Earth Garden",
-      items: [
-        { name: "Mixed Greens", quantity: "2 bags", price: 8.00 },
-        { name: "Cherry Tomatoes", quantity: "1 lb", price: 4.99 },
-      ],
-      total: 12.99,
-      status: "delivered",
-      deliveryDate: "2024-01-12",
-      rating: 5,
-      location: "20 miles away",
-    },
-  ];
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await customerAPI.getOrders();
+      setOrders(response.data || []);
+    } catch (error) {
+      console.error("Failed to load orders:", error);
+      toast({
+        title: "Failed to load orders",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "delivered":
+      case "completed":
         return <CheckCircle className="h-4 w-4" />;
-      case "in-transit":
-        return <Package className="h-4 w-4" />;
       case "processing":
+        return <Package className="h-4 w-4" />;
+      case "pending":
         return <Clock className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
@@ -86,11 +52,11 @@ const OrderHistory = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "delivered":
+      case "completed":
         return "bg-green-500 text-white";
-      case "in-transit":
-        return "bg-blue-500 text-white";
       case "processing":
+        return "bg-blue-500 text-white";
+      case "pending":
         return "bg-yellow-500 text-white";
       default:
         return "bg-gray-300 text-gray-700";
@@ -100,30 +66,38 @@ const OrderHistory = () => {
   const handleReorder = (order) => {
     // Add all items from the order to cart
     const existingCart = JSON.parse(localStorage.getItem('cart')) || [];
-    
+
     order.items.forEach(orderItem => {
-      // Find the product in our available products (you might need to map this properly)
       const product = {
-        id: Date.now() + Math.random(), // Generate unique ID
-        name: orderItem.name,
-        price: orderItem.price / parseInt(orderItem.quantity), // Calculate unit price
-        unit: orderItem.quantity.split(' ')[1], // Extract unit
-        farmer: order.farmer,
-        location: order.location,
-        organic: true // Default to organic
+        id: orderItem.product.id,
+        name: orderItem.product.name,
+        price: parseFloat(orderItem.unit_price),
+        unit: orderItem.product.unit,
+        farmer: order.farmer.name,
+        location: order.farmer.pincode || 'Nearby',
+        organic: orderItem.product.organic,
+        image_url: orderItem.product.image_url,
+        description: orderItem.product.description,
+        stock: orderItem.product.stock
       };
-      
-      existingCart.push({
-        ...product,
-        quantity: parseInt(orderItem.quantity)
-      });
+
+      const existingItem = existingCart.find(item => item.id === product.id);
+
+      if (existingItem) {
+        existingItem.quantity += orderItem.quantity;
+      } else {
+        existingCart.push({
+          ...product,
+          quantity: orderItem.quantity
+        });
+      }
     });
 
     localStorage.setItem('cart', JSON.stringify(existingCart));
-    
+
     toast({
       title: "Order Recreated! 🛒",
-      description: `Items from your ${order.id} order have been added to cart.`,
+      description: `Items from your ${order.order_id} order have been added to cart.`,
       variant: "success"
     });
   };
@@ -131,7 +105,7 @@ const OrderHistory = () => {
   const handleRateOrder = (order) => {
     toast({
       title: "Thank You! ⭐",
-      description: `Your rating for order ${order.id} has been recorded.`,
+      description: `Your rating for order ${order.order_id} has been recorded.`,
       variant: "success"
     });
   };
@@ -139,7 +113,7 @@ const OrderHistory = () => {
   const handleTrackOrder = (order) => {
     toast({
       title: "Tracking Information",
-      description: `Your order ${order.id} is ${order.status}. Expected delivery: ${new Date(order.deliveryDate).toLocaleDateString()}`,
+      description: `Your order ${order.order_id} is ${order.status}. Expected delivery: ${new Date(order.delivery_date).toLocaleDateString()}`,
       variant: "default"
     });
   };
@@ -148,12 +122,24 @@ const OrderHistory = () => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`h-4 w-4 ${
-          i < rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-        }`}
+        className={`h-4 w-4 ${i < rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+          }`}
       />
     ));
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="container mx-auto px-4">
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+            <p className="mt-4 text-lg text-gray-600">Loading your orders...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -184,18 +170,18 @@ const OrderHistory = () => {
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <CardTitle className="text-lg text-gray-900">{order.id}</CardTitle>
+                      <CardTitle className="text-lg text-gray-900">{order.order_id}</CardTitle>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-4 w-4" />
                           <span>
-                            Ordered {new Date(order.date).toLocaleDateString()}
+                            Ordered {new Date(order.order_date).toLocaleDateString()}
                           </span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <MapPin className="h-4 w-4" />
                           <span>
-                            {order.farmer} • {order.location}
+                            {order.farmer?.name || 'Farmer'} • {order.farmer?.pincode || 'Nearby'}
                           </span>
                         </div>
                       </div>
@@ -207,7 +193,7 @@ const OrderHistory = () => {
                     >
                       {getStatusIcon(order.status)}
                       <span className="capitalize">
-                        {order.status.replace("-", " ")}
+                        {order.status}
                       </span>
                     </Badge>
                   </div>
@@ -220,27 +206,29 @@ const OrderHistory = () => {
                       className="flex justify-between items-center py-2 border-b border-gray-200"
                     >
                       <div>
-                        <span className="font-medium text-gray-900">{item.name}</span>
+                        <span className="font-medium text-gray-900">{item.product_name}</span>
                         <span className="text-gray-500 ml-2">
-                          ({item.quantity})
+                          ({item.quantity} {item.product.unit})
                         </span>
                       </div>
                       <span className="font-semibold text-gray-900">
-                        ${item.price.toFixed(2)}
+                        ${(item.unit_price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   ))}
 
                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                     <span className="text-lg font-bold text-gray-900">
-                      Total: ${order.total.toFixed(2)}
+                      Total: ${parseFloat(order.total_amount).toFixed(2)}
                     </span>
-                    {order.status === "delivered" && order.rating && (
+                    {order.status === "completed" && (
                       <div className="flex items-center space-x-1">
                         <span className="text-sm text-gray-500">
-                          Your rating:
+                          Rate this order:
                         </span>
-                        <div className="flex">{renderStars(order.rating)}</div>
+                        <div className="flex cursor-pointer" onClick={() => handleRateOrder(order)}>
+                          {renderStars(0)}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -248,8 +236,8 @@ const OrderHistory = () => {
                   {/* Action Buttons */}
                   <div className="flex items-center justify-between pt-4">
                     <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleReorder(order)}
                         className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
@@ -257,9 +245,9 @@ const OrderHistory = () => {
                         <ShoppingCart className="h-4 w-4 mr-1" />
                         Reorder
                       </Button>
-                      {order.status === "delivered" && (
-                        <Button 
-                          variant="outline" 
+                      {order.status === "completed" && (
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handleRateOrder(order)}
                           className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
@@ -268,9 +256,9 @@ const OrderHistory = () => {
                           Rate Order
                         </Button>
                       )}
-                      {order.status !== "delivered" && (
-                        <Button 
-                          variant="outline" 
+                      {order.status !== "completed" && (
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handleTrackOrder(order)}
                           className="border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white"
@@ -289,7 +277,7 @@ const OrderHistory = () => {
           ))}
         </div>
 
-        {/* Empty State (if needed) */}
+        {/* Empty State */}
         {orders.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}

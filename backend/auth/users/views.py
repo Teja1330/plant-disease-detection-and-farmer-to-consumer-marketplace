@@ -42,10 +42,13 @@ class RegisterView(APIView):
             password = request.data.get('password', '')
             name = request.data.get('name', '').strip()
             role = request.data.get('role', '').strip().lower()
+            phone = request.data.get('phone', '').strip()
+            address = request.data.get('address', '').strip()
+            pincode = request.data.get('pincode', '').strip()
 
             # Basic validations
             if not all([email, password, name, role]):
-                return Response({'detail': 'All fields are required.'}, status=400)
+                return Response({'detail': 'Email, password, name and role are required.'}, status=400)
 
             if role not in ['farmer', 'customer']:
                 return Response({'detail': 'Invalid role.'}, status=400)
@@ -73,7 +76,18 @@ class RegisterView(APIView):
                 return Response({'detail': 'Email already registered as customer.'}, status=400)
 
             # Create user based on role
-            user_data = {'email': email, 'name': name, 'password': password}
+            user_data = {
+                'email': email, 
+                'name': name, 
+                'password': password,
+                'phone': phone,
+                'street_address': request.data.get('street_address', '').strip(),
+                'city': request.data.get('city', '').strip(),
+                'district': request.data.get('district', '').strip(),
+                'state': request.data.get('state', '').strip(),
+                'country': request.data.get('country', 'India').strip(),
+                'pincode': request.data.get('pincode', '').strip()
+            }
             user_instance = None
             has_farmer = False
             has_customer = False
@@ -130,12 +144,20 @@ class RegisterView(APIView):
                     'email': user_instance.email,
                     'role': role,
                     'has_farmer': has_farmer or MultiAccount.objects.filter(email=email).exists(),
-                    'has_customer': has_customer or MultiAccount.objects.filter(email=email).exists()
+                    'has_customer': has_customer or MultiAccount.objects.filter(email=email).exists(),
+                    'phone': getattr(user_instance, 'phone', phone),
+                    'street_address': getattr(user_instance, 'street_address', ''),
+                    'city': getattr(user_instance, 'city', ''),
+                    'district': getattr(user_instance, 'district', ''),
+                    'state': getattr(user_instance, 'state', ''),
+                    'country': getattr(user_instance, 'country', 'India'),
+                    'pincode': getattr(user_instance, 'pincode', '')
                 }
             })
                 
         except Exception as e:
             return Response({'detail': f'Registration failed: {str(e)}'}, status=400)
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
@@ -255,8 +277,12 @@ class UserView(APIView):
             'name': getattr(user_instance, 'name', ''),
             'email': user_instance.email,
             'has_farmer': has_farmer,
-            'has_customer': has_customer
+            'has_customer': has_customer,
+            'phone': getattr(user_instance, 'phone', ''),
+            'address': getattr(user_instance, 'address', ''),
+            'pincode': getattr(user_instance, 'pincode', '')
         })
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class SwitchAccountView(APIView):
@@ -285,3 +311,179 @@ class SwitchAccountView(APIView):
             'token': new_token,
             'role': target_role
         })
+
+
+
+# users/views.py - Update SwitchAccountView
+@method_decorator(csrf_exempt, name='dispatch')
+class SwitchAccountView(APIView):
+    def post(self, request):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return Response({'detail': 'Unauthenticated.'}, status=401)
+            
+        token = auth_header.split(' ')[1]
+        target_role = request.data.get('role', '').strip().lower()
+
+        if target_role not in ['farmer', 'customer']:
+            return Response({'detail': 'Invalid role specified.'}, status=400)
+
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        except:
+            return Response({'detail': 'Invalid token.'}, status=401)
+
+        # Get the original user to check permissions
+        user_id = payload['id']
+        user_email = payload['email']
+        
+        # Check if user has permission to switch to this role
+        has_farmer = payload.get('has_farmer', False)
+        has_customer = payload.get('has_customer', False)
+        
+        if target_role == 'farmer' and not has_farmer:
+            return Response({'detail': 'You do not have a farmer account.'}, status=403)
+        if target_role == 'customer' and not has_customer:
+            return Response({'detail': 'You do not have a customer account.'}, status=403)
+
+        # Create new payload with updated role
+        new_payload = {
+            'id': payload['id'],
+            'email': payload['email'],
+            'role': target_role,
+            'has_farmer': has_farmer,
+            'has_customer': has_customer,
+            'exp': payload['exp'],
+            'iat': payload['iat']
+        }
+        
+        new_token = jwt.encode(new_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+        return Response({
+            'message': f'Switched to {target_role} account',
+            'token': new_token,
+            'role': target_role,
+            'has_farmer': has_farmer,
+            'has_customer': has_customer
+        })
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class LogoutView(APIView):
+    def post(self, request):
+        try:
+            return Response({
+                'message': 'Logged out successfully'
+            })
+        except Exception as e:
+            return Response({'detail': f'Logout failed: {str(e)}'}, status=400)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AvailableDistrictsView(APIView):
+    permission_classes = [AllowAny]  # Allow anyone to access this
+    
+    def get(self, request):
+        try:
+            # Get unique districts from farmers who have set their district
+            districts = Farmer.objects.filter(
+                district__isnull=False
+            ).exclude(
+                district=''
+            ).values_list('district', flat=True).distinct()
+            
+            return Response({
+                'districts': list(districts)
+            })
+            
+        except Exception as e:
+            return Response({'detail': f'Failed to fetch districts: {str(e)}'}, status=400)
+
+
+# users/views.py - Add this if missing
+@method_decorator(csrf_exempt, name='dispatch')
+class UpdateAddressView(APIView):
+    def patch(self, request):
+        try:
+            user_id = request.user.id
+            user_email = request.user.email
+            
+            # Get address data from request
+            street_address = request.data.get('street_address', '').strip()
+            city = request.data.get('city', '').strip()
+            district = request.data.get('district', '').strip()
+            state = request.data.get('state', '').strip()
+            country = request.data.get('country', 'India').strip()
+            pincode = request.data.get('pincode', '').strip()
+
+            # Validate required fields
+            if not all([street_address, city, district, state, pincode]):
+                return Response({'detail': 'All address fields are required.'}, status=400)
+
+            # Find user and update address
+            user_instance = None
+            
+            # Check MultiAccount
+            multi_account = MultiAccount.objects.filter(id=user_id).first()
+            if multi_account:
+                # Update both farmer and customer addresses
+                multi_account.farmer.street_address = street_address
+                multi_account.farmer.city = city
+                multi_account.farmer.district = district
+                multi_account.farmer.state = state
+                multi_account.farmer.country = country
+                multi_account.farmer.pincode = pincode
+                
+                multi_account.customer.street_address = street_address
+                multi_account.customer.city = city
+                multi_account.customer.district = district
+                multi_account.customer.state = state
+                multi_account.customer.country = country
+                multi_account.customer.pincode = pincode
+                
+                multi_account.farmer.save()
+                multi_account.customer.save()
+                user_instance = multi_account
+                
+            else:
+                # Check individual tables
+                farmer = Farmer.objects.filter(id=user_id).first()
+                customer = Customer.objects.filter(id=user_id).first()
+                
+                if farmer:
+                    farmer.street_address = street_address
+                    farmer.city = city
+                    farmer.district = district
+                    farmer.state = state
+                    farmer.country = country
+                    farmer.pincode = pincode
+                    farmer.save()
+                    user_instance = farmer
+                    
+                elif customer:
+                    customer.street_address = street_address
+                    customer.city = city
+                    customer.district = district
+                    customer.state = state
+                    customer.country = country
+                    customer.pincode = pincode
+                    customer.save()
+                    user_instance = customer
+
+            if not user_instance:
+                return Response({'detail': 'User not found.'}, status=404)
+
+            return Response({
+                'message': 'Address updated successfully',
+                'address': {
+                    'street_address': street_address,
+                    'city': city,
+                    'district': district,
+                    'state': state,
+                    'country': country,
+                    'pincode': pincode
+                }
+            })
+            
+        except Exception as e:
+            return Response({'detail': f'Failed to update address: {str(e)}'}, status=400)

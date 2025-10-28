@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea"; // ADD THIS IMPORT
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Tractor, Eye, EyeOff, Check, X } from "lucide-react";
@@ -17,6 +18,13 @@ const Signup = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    phone: "",
+    street_address: "",
+    city: "",
+    district: "",
+    state: "",
+    country: "India",
+    pincode: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -71,8 +79,8 @@ const Signup = () => {
       return false;
     }
 
-    if (!passwordStrength.length || !passwordStrength.uppercase || 
-        !passwordStrength.lowercase || !passwordStrength.number || !passwordStrength.special) {
+    if (!passwordStrength.length || !passwordStrength.uppercase ||
+      !passwordStrength.lowercase || !passwordStrength.number || !passwordStrength.special) {
       toast({
         title: "Weak Password",
         description: "Please ensure your password meets all requirements.",
@@ -85,6 +93,16 @@ const Signup = () => {
       toast({
         title: "Passwords Don't Match",
         description: "Please make sure your passwords match.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Validate required address fields
+    if (!formData.street_address || !formData.city || !formData.district || !formData.state || !formData.pincode) {
+      toast({
+        title: "Address Required",
+        description: "Please fill in all address fields.",
         variant: "destructive",
       });
       return false;
@@ -109,12 +127,19 @@ const Signup = () => {
 
     try {
       setIsLoading(true);
-      
+
       const response = await API.post("/register", {
         name: formData.name.trim(),
         email: formData.email.toLowerCase().trim(),
         password: formData.password,
         role: selectedRole,
+        phone: formData.phone.trim(),
+        street_address: formData.street_address.trim(),
+        city: formData.city.trim(),
+        district: formData.district.trim(),
+        state: formData.state.trim(),
+        country: formData.country.trim(),
+        pincode: formData.pincode.trim(),
       });
 
       toast({
@@ -123,10 +148,12 @@ const Signup = () => {
       });
 
       localStorage.setItem('auth_token', response.data.token);
-      
+
       // Store password temporarily for auto-registration
       localStorage.setItem('temp_password', formData.password);
 
+      // Store user data with address
+      localStorage.setItem('user_data', JSON.stringify(response.data.user));
 
       // Redirect based on account type
       setTimeout(() => {
@@ -139,9 +166,9 @@ const Signup = () => {
 
     } catch (error) {
       console.error("Signup error:", error);
-      
+
       let errorMessage = "Signup failed. Please try again.";
-      
+
       if (error.response?.status === 400) {
         errorMessage = error.response.data.detail || "Please check your information and try again.";
       }
@@ -192,8 +219,8 @@ const Signup = () => {
           </div>
 
           <div className="grid gap-4">
-            <motion.div 
-              whileHover={{ scale: 1.02 }} 
+            <motion.div
+              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -215,8 +242,8 @@ const Signup = () => {
               </Card>
             </motion.div>
 
-            <motion.div 
-              whileHover={{ scale: 1.02 }} 
+            <motion.div
+              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -247,8 +274,8 @@ const Signup = () => {
           >
             <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
-              <a 
-                href="/login" 
+              <a
+                href="/login"
                 className="text-primary hover:underline font-medium"
                 onClick={(e) => {
                   e.preventDefault();
@@ -270,7 +297,7 @@ const Signup = () => {
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="w-full max-w-md"
+        className="w-full max-w-2xl" // Increased width for address fields
       >
         <Card className="shadow-xl border-border/50 backdrop-blur-sm bg-card/95">
           <CardHeader className="text-center space-y-4 pb-6">
@@ -295,9 +322,9 @@ const Signup = () => {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <Button 
-              variant="outline" 
-              onClick={() => setSelectedRole(null)} 
+            <Button
+              variant="outline"
+              onClick={() => setSelectedRole(null)}
               className="w-full border-border hover:border-primary"
               disabled={isLoading}
             >
@@ -312,13 +339,13 @@ const Signup = () => {
                 className="space-y-2"
               >
                 <Label htmlFor="name" className="text-sm font-medium">Full Name *</Label>
-                <Input 
+                <Input
                   id="name"
-                  name="name" 
-                  value={formData.name} 
-                  onChange={handleInputChange} 
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
                   placeholder="Enter your full name"
-                  required 
+                  required
                   disabled={isLoading}
                   className="bg-background/50 border-border/70 focus:border-primary"
                 />
@@ -331,14 +358,14 @@ const Signup = () => {
                 className="space-y-2"
               >
                 <Label htmlFor="email" className="text-sm font-medium">Email *</Label>
-                <Input 
+                <Input
                   id="email"
-                  name="email" 
-                  type="email" 
-                  value={formData.email} 
-                  onChange={handleInputChange} 
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
                   placeholder="Enter your email address"
-                  required 
+                  required
                   disabled={isLoading}
                   className="bg-background/50 border-border/70 focus:border-primary"
                 />
@@ -347,7 +374,143 @@ const Signup = () => {
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="space-y-2"
+              >
+                <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="Enter your phone number"
+                  disabled={isLoading}
+                  className="bg-background/50 border-border/70 focus:border-primary"
+                />
+              </motion.div>
+
+              {/* Address Fields */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.35 }}
+                className="space-y-2"
+              >
+                <Label htmlFor="street_address" className="text-sm font-medium">Street Address *</Label>
+                <Textarea
+                  id="street_address"
+                  name="street_address"
+                  value={formData.street_address}
+                  onChange={handleInputChange}
+                  placeholder="Enter your complete street address"
+                  required
+                  disabled={isLoading}
+                  className="bg-background/50 border-border/70 focus:border-primary"
+                />
+              </motion.div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="city" className="text-sm font-medium">City *</Label>
+                  <Input
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="City"
+                    required
+                    disabled={isLoading}
+                    className="bg-background/50 border-border/70 focus:border-primary"
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="district" className="text-sm font-medium">District *</Label>
+                  <Input
+                    id="district"
+                    name="district"
+                    value={formData.district}
+                    onChange={handleInputChange}
+                    placeholder="District"
+                    required
+                    disabled={isLoading}
+                    className="bg-background/50 border-border/70 focus:border-primary"
+                  />
+                </motion.div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.45 }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="state" className="text-sm font-medium">State *</Label>
+                  <Input
+                    id="state"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleInputChange}
+                    placeholder="State"
+                    required
+                    disabled={isLoading}
+                    className="bg-background/50 border-border/70 focus:border-primary"
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.45 }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="pincode" className="text-sm font-medium">Pincode *</Label>
+                  <Input
+                    id="pincode"
+                    name="pincode"
+                    value={formData.pincode}
+                    onChange={handleInputChange}
+                    placeholder="Pincode"
+                    required
+                    disabled={isLoading}
+                    className="bg-background/50 border-border/70 focus:border-primary"
+                  />
+                </motion.div>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className="space-y-2"
+              >
+                <Label htmlFor="country" className="text-sm font-medium">Country</Label>
+                <Input
+                  id="country"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleInputChange}
+                  placeholder="Country"
+                  disabled={isLoading}
+                  className="bg-background/50 border-border/70 focus:border-primary"
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
                 className="space-y-2"
               >
                 <Label className="text-sm font-medium">Password *</Label>
@@ -373,7 +536,7 @@ const Signup = () => {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
-                
+
                 <div className="space-y-1 p-2 bg-muted/50 rounded-md">
                   <PasswordRequirement met={passwordStrength.length} text="At least 8 characters" />
                   <PasswordRequirement met={passwordStrength.uppercase} text="One uppercase letter" />
@@ -386,7 +549,7 @@ const Signup = () => {
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
                 className="space-y-2"
               >
                 <Label className="text-sm font-medium">Confirm Password *</Label>
@@ -417,10 +580,10 @@ const Signup = () => {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
+                transition={{ duration: 0.5, delay: 0.7 }}
               >
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200 font-semibold"
                   disabled={isLoading}
                 >
@@ -439,13 +602,13 @@ const Signup = () => {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.7 }}
+              transition={{ duration: 0.5, delay: 0.8 }}
               className="text-center"
             >
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
-                <a 
-                  href="/login" 
+                <a
+                  href="/login"
                   className="text-primary hover:underline font-medium"
                   onClick={(e) => {
                     e.preventDefault();

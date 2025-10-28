@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from "react";
+﻿// Cart.jsx - Fixed version
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,10 +20,19 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { handleScroll } from "@/components/Navbar";
+import { customerAPI } from "@/api";
+import { useUser } from "../../App";
+import AddressForm from "@/components/AddressForm";
+
 
 const Cart = () => {
   const { toast } = useToast();
   const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { user } = useUser();
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const hasAddress = user?.street_address && user?.city && user?.district && user?.state && user?.pincode;
+
 
   useEffect(() => {
     handleScroll();
@@ -30,6 +40,10 @@ const Cart = () => {
     const savedCart = JSON.parse(localStorage.getItem('cart')) || [];
     setCartItems(savedCart);
   }, []);
+
+  const getPrice = (item) => {
+    return typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+  };
 
   const updateQuantity = (id, newQuantity) => {
     let updatedCart;
@@ -60,10 +74,10 @@ const Cart = () => {
   const removeItem = (id) => {
     const item = cartItems.find(item => item.id === id);
     const updatedCart = cartItems.filter(item => item.id !== id);
-    
+
     setCartItems(updatedCart);
     localStorage.setItem('cart', JSON.stringify(updatedCart));
-    
+
     toast({
       title: "Item Removed",
       description: `${item.name} has been removed from your cart.`,
@@ -83,7 +97,7 @@ const Cart = () => {
 
     setCartItems([]);
     localStorage.setItem('cart', JSON.stringify([]));
-    
+
     toast({
       title: "Cart Cleared",
       description: "All items have been removed from your cart.",
@@ -91,12 +105,16 @@ const Cart = () => {
     });
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cartItems.reduce((sum, item) => {
+    const price = getPrice(item);
+    return sum + (price * item.quantity);
+  }, 0);
+
   const deliveryFee = subtotal > 50 ? 0 : 4.99;
   const tax = subtotal * 0.08;
   const total = subtotal + deliveryFee + tax;
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cartItems.length === 0) {
       toast({
         title: "Cart is empty",
@@ -106,15 +124,42 @@ const Cart = () => {
       return;
     }
 
-    toast({
-      title: "Order Placed! 🎉",
-      description: "Your order has been successfully placed. Thank you for your purchase!",
-      variant: "success"
-    });
 
-    // Clear cart after successful checkout
-    setCartItems([]);
-    localStorage.setItem('cart', JSON.stringify([]));
+    try {
+      setLoading(true);
+
+      // Prepare cart items for API
+      const cartItemsForAPI = cartItems.map(item => ({
+        product_id: item.id,
+        quantity: item.quantity,
+        price: getPrice(item),
+        name: item.name
+      }));
+
+      const response = await customerAPI.createOrder({
+        cart_items: cartItemsForAPI
+      });
+
+      toast({
+        title: "Order Placed! 🎉",
+        description: `Your order #${response.data.order.order_id} has been placed successfully! Delivery within 5 hours.`,
+        variant: "success"
+      });
+
+      // Clear cart after successful checkout
+      setCartItems([]);
+      localStorage.setItem('cart', JSON.stringify([]));
+
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast({
+        title: "Checkout Failed",
+        description: error.response?.data?.detail || "Failed to place order. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -141,8 +186,8 @@ const Cart = () => {
               </h1>
             </div>
             {cartItems.length > 0 && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={clearCart}
                 className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
               >
@@ -189,7 +234,15 @@ const Cart = () => {
                         <div className="flex items-center space-x-4">
                           {/* Product Image */}
                           <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 relative">
-                            <Leaf className="h-8 w-8 text-green-300" />
+                            {item.image_url ? (
+                              <img
+                                src={item.image_url}
+                                alt={item.name}
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                            ) : (
+                              <Leaf className="h-8 w-8 text-green-300" />
+                            )}
                             {item.organic && (
                               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full" />
                             )}
@@ -201,7 +254,7 @@ const Cart = () => {
                               <h3 className="font-semibold text-gray-900">{item.name}</h3>
                               <p className="text-sm text-gray-600">{item.farmer}</p>
                             </div>
-                            
+
                             <div className="flex items-center space-x-4 text-xs text-gray-500">
                               <div className="flex items-center">
                                 <MapPin className="h-3 w-3 mr-1" />
@@ -215,9 +268,9 @@ const Cart = () => {
 
                             <div className="flex items-center justify-between">
                               <span className="text-lg font-bold text-green-600">
-                                ${item.price.toFixed(2)}/{item.unit}
+                                ${getPrice(item).toFixed(2)}/{item.unit}
                               </span>
-                              
+
                               {/* Quantity Controls */}
                               <div className="flex items-center space-x-2">
                                 <Button
@@ -228,7 +281,7 @@ const Cart = () => {
                                 >
                                   <Minus className="h-4 w-4" />
                                 </Button>
-                                
+
                                 <Input
                                   type="number"
                                   value={item.quantity}
@@ -236,7 +289,7 @@ const Cart = () => {
                                   className="w-16 text-center border-gray-300"
                                   min="0"
                                 />
-                                
+
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -245,7 +298,7 @@ const Cart = () => {
                                 >
                                   <Plus className="h-4 w-4" />
                                 </Button>
-                                
+
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -256,10 +309,10 @@ const Cart = () => {
                                 </Button>
                               </div>
                             </div>
-                            
+
                             <div className="text-right">
                               <span className="text-lg font-bold text-gray-900">
-                                ${(item.price * item.quantity).toFixed(2)}
+                                ${(getPrice(item) * item.quantity).toFixed(2)}
                               </span>
                             </div>
                           </div>
@@ -271,6 +324,25 @@ const Cart = () => {
               </>
             )}
           </div>
+
+
+          {
+            !hasAddress && cartItems.length > 0 && (
+              <div className="lg:col-span-2">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                  <MapPin className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-yellow-800 mb-2">Delivery Address Required</h3>
+                  <p className="text-yellow-600 mb-4">Please set your delivery address before you can checkout.</p>
+                  <Button
+                    onClick={() => setShowAddressForm(true)}
+                    className="bg-yellow-600 hover:bg-yellow-700"
+                  >
+                    Set Delivery Address
+                  </Button>
+                </div>
+              </div>
+            )
+          }
 
           {/* Order Summary */}
           {cartItems.length > 0 && (
@@ -290,7 +362,7 @@ const Cart = () => {
                       <span className="text-gray-600">Subtotal</span>
                       <span className="font-medium">${subtotal.toFixed(2)}</span>
                     </div>
-                    
+
                     <div className="flex justify-between">
                       <span className="text-gray-600">
                         Delivery Fee
@@ -302,14 +374,14 @@ const Cart = () => {
                         {deliveryFee === 0 ? 'FREE' : `$${deliveryFee.toFixed(2)}`}
                       </span>
                     </div>
-                    
+
                     <div className="flex justify-between">
                       <span className="text-gray-600">Tax</span>
                       <span className="font-medium">${tax.toFixed(2)}</span>
                     </div>
-                    
+
                     <Separator />
-                    
+
                     <div className="flex justify-between text-lg font-bold">
                       <span className="text-gray-900">Total</span>
                       <span className="text-green-600">${total.toFixed(2)}</span>
@@ -319,20 +391,33 @@ const Cart = () => {
                   <div className="bg-gray-50 rounded-lg p-4 space-y-2 border border-gray-200">
                     <div className="flex items-center space-x-2 text-sm">
                       <Truck className="h-4 w-4 text-green-600" />
-                      <span className="font-medium text-gray-900">Estimated Delivery</span>
+                      <span className="font-medium text-gray-900">Fast Delivery</span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      2–3 business days
+                      Fresh delivery within 5 hours
                     </p>
                   </div>
 
-                  <Button 
+                  <Button
                     className="w-full bg-green-600 hover:bg-green-700 shadow-md text-lg py-3"
                     onClick={handleCheckout}
+                    disabled={loading || !hasAddress} // Disable if no address
                   >
-                    <CreditCard className="h-5 w-5 mr-2" />
-                    Checkout
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Placing Order...
+                      </>
+                    ) : !hasAddress ? (
+                      "Add Address to Checkout"
+                    ) : (
+                      <>
+                        <CreditCard className="h-5 w-5 mr-2" />
+                        Checkout
+                      </>
+                    )}
                   </Button>
+
 
                   <div className="space-y-2 text-xs text-gray-500">
                     <p className="flex items-center">
@@ -340,7 +425,7 @@ const Cart = () => {
                       Supporting {new Set(cartItems.map(item => item.farmer)).size} local farmers
                     </p>
                     <p>Free delivery on orders over $50</p>
-                    <p>100% money-back guarantee</p>
+                    <p>Fresh delivery within 5 hours</p>
                   </div>
                 </CardContent>
               </Card>
@@ -348,7 +433,17 @@ const Cart = () => {
           )}
         </div>
       </div>
+      <AddressForm
+        isOpen={showAddressForm}
+        onClose={() => setShowAddressForm(false)}
+        onSuccess={() => {
+          // Reload or refresh as needed
+          window.location.reload();
+        }}
+        user={user}
+      />
     </div>
+
   );
 };
 

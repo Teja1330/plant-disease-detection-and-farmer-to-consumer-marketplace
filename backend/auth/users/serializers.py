@@ -4,7 +4,11 @@ from .models import Farmer, Customer
 class FarmerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Farmer
-        fields = ['id', 'name', 'email', 'password', 'created_at']
+        fields = [
+            'id', 'name', 'email', 'password', 
+            'phone', 'street_address', 'city', 'district', 
+            'state', 'country', 'pincode', 'created_at'
+        ]
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -18,7 +22,11 @@ class FarmerSerializer(serializers.ModelSerializer):
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ['id', 'name', 'email', 'password', 'created_at']
+        fields = [
+            'id', 'name', 'email', 'password', 
+            'phone', 'street_address', 'city', 'district', 
+            'state', 'country', 'pincode', 'created_at'
+        ]
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):

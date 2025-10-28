@@ -51,27 +51,30 @@ const AppContent = () => {
   const logout = async () => {
     try {
       await API.post("/logout");
+    } catch (err) {
+      console.error("Logout API failed:", err);
+    } finally {
+      // Always clear client-side storage
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('current_role');
+      localStorage.removeItem('user_data');
+      localStorage.removeItem('temp_password');
+      localStorage.removeItem('cart');
+      
+      setUser({
+        role: null,
+        name: null,
+        email: null,
+        has_farmer: false,
+        has_customer: false
+      });
+      
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account.",
         variant: "success"
       });
-    } catch (err) {
-      console.error("Logout failed:", err);
-      toast({
-        title: "Logout failed",
-        description: "There was an issue logging out.",
-        variant: "destructive"
-      });
     }
-    localStorage.removeItem('auth_token');
-    setUser({
-      role: null,
-      name: null,
-      email: null,
-      has_farmer: false,
-      has_customer: false
-    });
   };
 
   // Fetch user on page load
@@ -85,19 +88,36 @@ const AppContent = () => {
         }
 
         const res = await API.get("/user");
-        console.log("User data from API:", res.data); // Debug log
+        console.log("User data from API:", res.data);
 
-        setUser({
+        const userData = {
           email: res.data.email,
           name: res.data.name,
           role: res.data.role || (res.data.has_farmer ? 'farmer' : 'customer'),
           has_farmer: res.data.has_farmer || false,
           has_customer: res.data.has_customer || false
-        });
+        };
+
+        setUser(userData);
+
+        // Store user data in localStorage
+        localStorage.setItem('user_data', JSON.stringify({
+          name: userData.name,
+          email: userData.email,
+          role: userData.role
+        }));
+
+        // Store current role if not set
+        if (!localStorage.getItem('current_role')) {
+          localStorage.setItem('current_role', userData.role);
+        }
+
       } catch (err) {
         console.log("Not logged in or token expired");
         localStorage.removeItem('auth_token');
         localStorage.removeItem('temp_password');
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('current_role');
       } finally {
         setLoading(false);
       }
@@ -106,7 +126,7 @@ const AppContent = () => {
     fetchUser();
   }, []);
 
-  if (loading) return <p className="text-center mt-10">Loading...</p>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-center">Loading...</p></div>;
 
   return (
     <UserContext.Provider value={{ user, setUser, logout }}>

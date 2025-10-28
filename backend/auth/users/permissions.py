@@ -7,11 +7,11 @@ class IsFarmerOrMultiAccount(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         # Check if user is authenticated via our JWT system
-        if not request.user or not hasattr(request.user, 'has_farmer'):
+        if not request.user or not hasattr(request.user, 'id'):
             return False
         
-        # Allow if user has farmer account
-        return request.user.has_farmer
+        # Check if user has farmer permissions based on JWT payload
+        return getattr(request.user, 'has_farmer', False) or getattr(request.user, 'role', '') == 'farmer'
 
 class IsAuthenticatedWithJWT(permissions.BasePermission):
     """

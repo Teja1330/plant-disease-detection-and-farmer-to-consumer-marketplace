@@ -1,4 +1,4 @@
-﻿// Store.jsx - Fixed number input handling
+﻿// Store.jsx - Fixed number input handling with address validation
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -11,17 +11,24 @@ import {
   Plus, 
   Leaf, 
   Trash2,
-  Upload
+  Upload,
+  MapPin
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast"; 
 import { handleScroll } from "@/components/Navbar";
 import { farmerAPI } from "@/api";
+import { useUser } from "../../App";
+import AddressForm from "@/components/AddressForm";
 
 const Store = () => {
   const { toast } = useToast(); 
+  const { user } = useUser();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("products");
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const hasAddress = user?.street_address && user?.city && user?.district && user?.state && user?.pincode;
+
   
   useEffect(() => {
     handleScroll();
@@ -92,10 +99,8 @@ const Store = () => {
     }
   };
 
-  // Fixed input handlers for numbers
   const handlePriceChange = (e) => {
     const value = e.target.value;
-    // Allow only numbers and decimal point
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setNewProduct(prev => ({
         ...prev,
@@ -106,7 +111,6 @@ const Store = () => {
 
   const handleStockChange = (e) => {
     const value = e.target.value;
-    // Allow only numbers
     if (value === '' || /^\d+$/.test(value)) {
       setNewProduct(prev => ({
         ...prev,
@@ -125,6 +129,16 @@ const Store = () => {
   const handleAddProduct = async (e) => {
     e.preventDefault();
     
+    // Check if farmer has address set
+    if (!user.district || !user.street_address || !user.city || !user.state) {
+      toast({
+        title: "Address Required",
+        description: "Please set your complete address before adding products.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (!newProduct.name || !newProduct.price || !newProduct.unit || !newProduct.description) {
       toast({
         title: "Missing Information",
@@ -134,27 +148,16 @@ const Store = () => {
       return;
     }
 
-    // Validate price is a valid number
-    if (!newProduct.price || isNaN(parseFloat(newProduct.price)) || parseFloat(newProduct.price) <= 0) {
-      toast({
-        title: "Invalid Price",
-        description: "Please enter a valid price greater than 0",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
       setLoading(true);
       
-      // Create FormData to handle file upload
       const formData = new FormData();
       formData.append('name', newProduct.name.trim());
-      formData.append('price', parseFloat(newProduct.price)); // Convert to number
+      formData.append('price', parseFloat(newProduct.price));
       formData.append('unit', newProduct.unit.trim());
       formData.append('description', newProduct.description.trim());
       formData.append('category', newProduct.category);
-      formData.append('stock', parseInt(newProduct.stock) || 0); // Convert to number, default to 0
+      formData.append('stock', parseInt(newProduct.stock) || 0);
       formData.append('organic', newProduct.organic.toString());
       formData.append('harvest_date', newProduct.harvest_date);
       
@@ -162,19 +165,10 @@ const Store = () => {
         formData.append('image', newProduct.image);
       }
 
-      console.log("🔄 Creating product with data:", {
-        name: newProduct.name,
-        price: parseFloat(newProduct.price),
-        unit: newProduct.unit,
-        stock: parseInt(newProduct.stock) || 0,
-        organic: newProduct.organic
-      });
-
       const response = await farmerAPI.createProduct(formData);
       
       setProducts(prev => [response.data, ...prev]);
       
-      // Reset form with proper values
       setNewProduct({
         name: "",
         price: "",
@@ -187,7 +181,6 @@ const Store = () => {
         image: null
       });
 
-      // Reset file input
       const fileInput = document.getElementById('product-image');
       if (fileInput) fileInput.value = '';
 
@@ -199,11 +192,9 @@ const Store = () => {
       setActiveTab("products");
     } catch (error) {
       console.error("Failed to add product:", error);
-      console.error("Error response:", error.response?.data);
-      
       toast({
         title: "Failed to add product",
-        description: error.response?.data?.detail || JSON.stringify(error.response?.data) || "Please try again",
+        description: error.response?.data?.detail || "Please try again",
         variant: "destructive"
       });
     } finally {
@@ -227,6 +218,11 @@ const Store = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleAddressUpdateSuccess = () => {
+    // Reload the page to refresh the address check
+    window.location.reload();
   };
 
   return (
@@ -277,7 +273,23 @@ const Store = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {products.map((product, index) => (
+                  {/* Address Check */}
+                  {!hasAddress && (
+  <div className="col-span-full text-center py-8 bg-yellow-50 rounded-lg border border-yellow-200">
+    <MapPin className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+    <h3 className="text-lg font-semibold text-yellow-800 mb-2">Address Required</h3>
+    <p className="text-yellow-600 mb-4">You need to set your address before you can add products.</p>
+    <Button 
+      onClick={() => setShowAddressForm(true)}
+      className="bg-yellow-600 hover:bg-yellow-700"
+    >
+      Set Address
+    </Button>
+  </div>
+)}
+
+                  
+                  {user.district && products.map((product, index) => (
                     <motion.div
                       key={product.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -351,7 +363,7 @@ const Store = () => {
                 </div>
               )}
 
-              {products.length === 0 && !loading && (
+              {products.length === 0 && !loading && user.district && (
                 <div className="text-center py-16">
                   <Leaf className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">No products yet</h3>
@@ -426,8 +438,8 @@ const Store = () => {
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Price *</label>
                           <Input
-                            type="text" // Changed to text for better control
-                            inputMode="decimal" // Shows decimal keyboard on mobile
+                            type="text"
+                            inputMode="decimal"
                             placeholder="0.00"
                             value={newProduct.price}
                             onChange={handlePriceChange}
@@ -446,8 +458,8 @@ const Store = () => {
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Stock</label>
                           <Input
-                            type="text" // Changed to text for better control
-                            inputMode="numeric" // Shows number keyboard on mobile
+                            type="text"
+                            inputMode="numeric"
                             placeholder="0"
                             value={newProduct.stock}
                             onChange={handleStockChange}
@@ -500,7 +512,7 @@ const Store = () => {
 
                       <Button 
                         type="submit" 
-                        disabled={loading}
+                        disabled={loading || !user.district}
                         className="bg-blue-600 hover:bg-blue-700 w-full"
                       >
                         {loading ? (
@@ -512,6 +524,12 @@ const Store = () => {
                           "Add Product"
                         )}
                       </Button>
+
+                      {!user.district && (
+                        <p className="text-sm text-yellow-600 text-center">
+                          Please set your address first to add products
+                        </p>
+                      )}
                     </form>
                   </CardContent>
                 </Card>
@@ -520,6 +538,15 @@ const Store = () => {
           </Tabs>
         </motion.div>
       </div>
+
+      {/* Address Form Modal */}
+      <AddressForm
+        isOpen={showAddressForm}
+        onClose={() => setShowAddressForm(false)}
+        onSuccess={handleAddressUpdateSuccess}
+        user={user}
+        role="farmer"
+      />
     </div>
   );
 };

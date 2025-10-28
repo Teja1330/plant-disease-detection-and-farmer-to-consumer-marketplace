@@ -13,9 +13,9 @@ import { handleScroll } from "@/components/Navbar";
 
 const Login = () => {
   useEffect(() => {
-        handleScroll();
+    handleScroll();
   }, []);
-      
+
   const { setUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,9 +56,17 @@ const Login = () => {
 
       const { token, user: userData } = loginResponse.data;
 
-      // 2️⃣ Store token in localStorage for persistence
-      localStorage.setItem('auth_token', token); // ✅ Fixed variable name
+      // 2️⃣ Store token and role in localStorage for persistence
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('current_role', userData.role);
       localStorage.setItem('temp_password', password);
+
+      // Store user data
+      localStorage.setItem('user_data', JSON.stringify({
+        name: userData.name,
+        email: userData.email,
+        role: userData.role
+      }));
 
       // Update user context with ALL account information
       setUser({
@@ -82,7 +90,6 @@ const Login = () => {
         title: "Login successful!",
         description: `Welcome back, ${userData.name}!`,
       });
-      
 
     } catch (err) {
       console.error("Login error details:", err);
