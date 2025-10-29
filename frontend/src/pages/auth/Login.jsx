@@ -24,6 +24,8 @@ const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // In Login.jsx - Replace the entire handleLogin function:
+
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -43,7 +45,7 @@ const Login = () => {
 
       // 1️⃣ Login - get token from response
       const loginResponse = await API.post("/login", {
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password: password
       });
 
@@ -56,35 +58,44 @@ const Login = () => {
 
       const { token, user: userData } = loginResponse.data;
 
+      console.log("🔍 Login user data:", userData);
+
       // 2️⃣ Store token and role in localStorage for persistence
       localStorage.setItem('auth_token', token);
       localStorage.setItem('current_role', userData.role);
       localStorage.setItem('temp_password', password);
 
-      // Store user data
-      localStorage.setItem('user_data', JSON.stringify({
-        name: userData.name,
-        email: userData.email,
-        role: userData.role
-      }));
+      // 3️⃣ Store the user data immediately from login response
+      localStorage.setItem('user_data', JSON.stringify(userData));
 
-      // Update user context with ALL account information
-      setUser({
-        email: userData.email,
-        name: userData.name,
-        role: userData.role,
-        has_farmer: userData.has_farmer || false,
-        has_customer: userData.has_customer || false
-      });
+      // Update user context with the data from login response
+      setUser(userData);
 
-      // Then redirect based on account types
+      // Trigger auth change for navbar
+      window.dispatchEvent(new Event('authChange'));
+      console.log("🔄 Auth change event dispatched");
+
+      console.log("✅ Login successful - User data:", userData);
+
+      // Determine navigation path based on ACTUAL user data from login
+      let targetPath = "/";
       if (userData.has_farmer && userData.has_customer) {
-        navigate("/account-choice");
-      } else if (userData.has_farmer) {
-        navigate("/farmer");
-      } else {
-        navigate("/customer");
+        targetPath = "/account-choice";
+        console.log("➡️ Multi-account user, navigating to account choice");
+      } else if (userData.role === 'farmer' || userData.has_farmer) {
+        targetPath = "/farmer";
+        console.log("➡️ Farmer user, navigating to farmer dashboard");
+      } else if (userData.role === 'customer' || userData.has_customer) {
+        targetPath = "/customer";
+        console.log("➡️ Customer user, navigating to customer dashboard");
       }
+
+      console.log("🔄 Final navigation to:", targetPath);
+
+      // Navigate
+      setTimeout(() => {
+        navigate(targetPath, { replace: true });
+      }, 100);
 
       toast({
         title: "Login successful!",

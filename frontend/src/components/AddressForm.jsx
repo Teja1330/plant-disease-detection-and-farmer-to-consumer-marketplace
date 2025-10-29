@@ -28,7 +28,7 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
     if (isOpen) {
       loadDistricts();
       loadExistingAddress();
-      
+
       // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
     } else {
@@ -53,44 +53,49 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
     }
   };
 
+  // In AddressForm.jsx - update the loadExistingAddress function
   const loadExistingAddress = async () => {
     try {
       console.log("🔄 Loading existing address...");
       const response = await addressAPI.getCurrentAddress();
       const userData = response.data;
-      
-      // Check if user has complete address
-      const hasAddress = userData.street_address && 
-                         userData.city && 
-                         userData.district && 
-                         userData.state && 
-                         userData.pincode;
-      
+
+      console.log("📦 User data from API:", userData);
+
+      // Check if user has complete address (handle empty strings)
+      const hasAddress = userData.street_address && userData.street_address.trim() !== '' &&
+        userData.city && userData.city.trim() !== '' &&
+        userData.district && userData.district.trim() !== '' &&
+        userData.state && userData.state.trim() !== '' &&
+        userData.pincode && userData.pincode.trim() !== '';
+
+      console.log("✅ Has complete address:", hasAddress);
+      console.log("📍 Address fields:", {
+        street: userData.street_address,
+        city: userData.city,
+        district: userData.district,
+        state: userData.state,
+        pincode: userData.pincode
+      });
+
       setHasExistingAddress(hasAddress);
-      
+
+      // Always pre-fill form with whatever data exists (even empty strings)
+      setFormData({
+        street_address: userData.street_address || "",
+        city: userData.city || "",
+        district: userData.district || "",
+        state: userData.state || "",
+        country: userData.country || "India",
+        pincode: userData.pincode || ""
+      });
+
       if (hasAddress) {
-        // Pre-fill form with existing user address
-        setFormData({
-          street_address: userData.street_address || "",
-          city: userData.city || "",
-          district: userData.district || "",
-          state: userData.state || "",
-          country: userData.country || "India",
-          pincode: userData.pincode || ""
-        });
-      } else if (user) {
-        // Fallback to user props if no complete address in DB
-        setFormData({
-          street_address: user.street_address || "",
-          city: user.city || "",
-          district: user.district || "",
-          state: user.state || "",
-          country: user.country || "India",
-          pincode: user.pincode || ""
-        });
+        console.log("✅ Form pre-filled with existing complete address");
+      } else {
+        console.log("⚠️ Form pre-filled with incomplete/empty address data");
       }
-      
-      console.log("✅ Address loaded - Has existing:", hasAddress);
+
     } catch (error) {
       console.error("❌ Failed to load existing address:", error);
       // If API fails, use user props
@@ -103,6 +108,7 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
           country: user.country || "India",
           pincode: user.pincode || ""
         });
+        console.log("⚠️ Using user props due to API error");
       }
     }
   };
@@ -116,7 +122,7 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.street_address || !formData.city || !formData.district || !formData.state || !formData.pincode) {
       toast({
         title: "Missing Fields",
@@ -129,10 +135,25 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
     try {
       setLoading(true);
       console.log("🔄 Updating address with data:", formData);
-      
+
       const response = await addressAPI.updateAddress(formData);
       console.log("✅ Address update response:", response.data);
-      
+
+      // 🆕 REFRESH USER DATA AFTER ADDRESS UPDATE
+      console.log("🔄 Refreshing user data after address update...");
+      try {
+        const userResponse = await addressAPI.getCurrentAddress();
+        const updatedUserData = userResponse.data;
+
+        // Update user context
+        setUser(updatedUserData);
+        localStorage.setItem('user_data', JSON.stringify(updatedUserData));
+
+        console.log("✅ User data refreshed after address update");
+      } catch (refreshError) {
+        console.error("❌ Failed to refresh user data:", refreshError);
+      }
+
       toast({
         title: "Address Updated!",
         description: "Your address has been updated successfully.",
@@ -142,19 +163,20 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
       if (onSuccess) {
         onSuccess(response.data.address);
       }
-      
+
       onClose();
     } catch (error) {
       console.error("❌ Failed to update address:", error);
+
       console.error("Error details:", error.response?.data);
-      
+
       let errorMessage = "Failed to update address. Please try again.";
       if (error.response?.data?.detail) {
         errorMessage = error.response.data.detail;
       } else if (error.response?.status === 404) {
         errorMessage = "Address update endpoint not found. Please contact support.";
       }
-      
+
       toast({
         title: "Update Failed",
         description: errorMessage,
@@ -191,7 +213,7 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
       onClick={handleBackdropClick}
     >
@@ -210,7 +232,7 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
           >
             <X className="h-5 w-5" />
           </button>
-          
+
           <CardHeader className="pb-4 flex-shrink-0">
             <CardTitle className="flex items-center gap-2 text-xl">
               <MapPin className="h-6 w-6 text-blue-600" />
@@ -223,7 +245,7 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
               </div>
             )}
           </CardHeader>
-          
+
           <CardContent className="pt-0 flex-1 overflow-hidden flex flex-col">
             <form onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto pr-2 flex flex-col">
               <div className="space-y-4 flex-1">

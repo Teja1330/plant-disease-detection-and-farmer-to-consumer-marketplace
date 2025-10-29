@@ -23,6 +23,8 @@ import { handleScroll } from "@/components/Navbar";
 import { customerAPI } from "@/api";
 import { useUser } from "../../App";
 import AddressForm from "@/components/AddressForm";
+import { hasCompleteAddress, hasNoAddress } from "@/lib/address";
+
 
 
 const Cart = () => {
@@ -31,7 +33,15 @@ const Cart = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useUser();
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const hasAddress = user?.street_address && user?.city && user?.district && user?.state && user?.pincode;
+  const hasAddress = hasCompleteAddress(user);
+  const noAddress = hasNoAddress(user);
+
+
+  console.log("🛒 Cart - User address status:", {
+    hasAddress,
+    noAddress,
+    user: user
+  });
 
 
   useEffect(() => {
@@ -325,24 +335,28 @@ const Cart = () => {
             )}
           </div>
 
-
-          {
-            !hasAddress && cartItems.length > 0 && (
-              <div className="lg:col-span-2">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-                  <MapPin className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-yellow-800 mb-2">Delivery Address Required</h3>
-                  <p className="text-yellow-600 mb-4">Please set your delivery address before you can checkout.</p>
-                  <Button
-                    onClick={() => setShowAddressForm(true)}
-                    className="bg-yellow-600 hover:bg-yellow-700"
-                  >
-                    Set Delivery Address
-                  </Button>
-                </div>
+          {!hasAddress && cartItems.length > 0 && (
+            <div className="lg:col-span-2">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                <MapPin className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                  {noAddress ? "Delivery Address Required" : "Delivery Address Incomplete"}
+                </h3>
+                <p className="text-yellow-600 mb-4">
+                  {noAddress
+                    ? "Please set your delivery address before you can checkout."
+                    : "Your delivery address is incomplete. Please complete all address fields."
+                  }
+                </p>
+                <Button
+                  onClick={() => setShowAddressForm(true)}
+                  className="bg-yellow-600 hover:bg-yellow-700"
+                >
+                  {noAddress ? "Set Delivery Address" : "Complete Address"}
+                </Button>
               </div>
-            )
-          }
+            </div>
+          )}
 
           {/* Order Summary */}
           {cartItems.length > 0 && (

@@ -12,6 +12,12 @@ const API = axios.create({
 // Request interceptor
 API.interceptors.request.use(
   (config) => {
+    // Skip token check for login and register endpoints
+    if (config.url === '/login' || config.url === '/register') {
+      console.log(`🔓 Making ${config.method?.toUpperCase()} request to:`, config.url);
+      return config;
+    }
+    
     const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -34,6 +40,13 @@ API.interceptors.response.use(
       status: response.status,
       url: response.config.url,
     });
+    
+    // If this is a login response, store the token
+    if (response.config.url === '/login' && response.data.token) {
+      localStorage.setItem('auth_token', response.data.token);
+      console.log('🔑 Token stored from login response');
+    }
+    
     return response;
   },
   (error) => {
@@ -56,6 +69,8 @@ API.interceptors.response.use(
 );
 
 export default API;
+
+
 
 // Plant Detection API
 export const plantDetectionAPI = {
@@ -82,6 +97,8 @@ export const plantDetectionAPI = {
     }
   }
 };
+
+
 
 // Farmer API
 export const farmerAPI = {
@@ -117,6 +134,8 @@ export const farmerAPI = {
   }
 };
 
+
+
 // Customer API
 export const customerAPI = {
   // Marketplace
@@ -151,7 +170,8 @@ export const customerAPI = {
   }
 };
 
-// Auth API - CORRECTED PATHS (no /users/ prefix)
+
+
 export const authAPI = {
   logout: () => {
     return API.post('/logout');
@@ -166,25 +186,22 @@ export const authAPI = {
   }
 };
 
-// Address and Location API - CORRECTED PATHS (no /users/ prefix)
+
+
 export const addressAPI = {
-  // Update user address
   updateAddress: (addressData) => {
     return API.patch('/update-address/', addressData);
   },
 
-  // Get available districts for dropdown
   getDistricts: () => {
     return API.get('/districts/');
   },
 
-  // Get current user address
   getCurrentAddress: () => {
     return API.get('/user');
   }
 };
 
-// Enhanced Auth API with address support
 export const enhancedAuthAPI = {
   ...authAPI,
   ...addressAPI

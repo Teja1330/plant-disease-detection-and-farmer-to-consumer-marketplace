@@ -1,3 +1,4 @@
+// components/ProfileDropdown.jsx - COMPLETELY FIXED
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,55 +11,107 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Tractor, LogOut, Settings, UserPlus, Loader2, Mail, MapPin } from "lucide-react";
+import { User, Tractor, LogOut, Settings, UserPlus, Loader2, Mail, MapPin, ShoppingCart } from "lucide-react";
 import { useUser } from "../App";
 import API from "../api";
 import { authAPI } from "../api";
 import AddressForm from "./AddressForm";
 
 const ProfileDropdown = () => {
-  const { user, setUser, logout } = useUser();
+  const { user, setUser, logout, refreshUserData } = useUser();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isRegistering, setIsRegistering] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
+
+  // Get current user data reliably
+  const getCurrentUser = () => {
+    try {
+      const storedUser = localStorage.getItem('user_data');
+      if (storedUser) {
+        return JSON.parse(storedUser);
+      }
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+    }
+    return user;
+  };
+
+  const currentUser = getCurrentUser();
 
   const handleSwitchAccount = async (targetRole) => {
+    if (!currentUser) return;
+
     try {
+      setIsSwitching(true);
+      console.log(`🔄 Switching to ${targetRole} account...`);
+
       const response = await authAPI.switchAccount(targetRole);
 
+      // Update tokens and roles
       localStorage.setItem('auth_token', response.data.token);
       localStorage.setItem('current_role', targetRole);
 
-      setUser(prev => ({
-        ...prev,
+      // Update user data in localStorage
+      const updatedUser = {
+        ...currentUser,
         role: targetRole
-      }));
+      };
+      localStorage.setItem('user_data', JSON.stringify(updatedUser));
 
-      navigate(targetRole === "farmer" ? "/farmer" : "/customer");
+      // Update context
+      setUser(updatedUser);
+
+      console.log(`✅ Switched to ${targetRole}, navigating...`);
+
+      // Force navigation with timeout
+      setTimeout(() => {
+        if (targetRole === "farmer") {
+          navigate("/farmer", { replace: true });
+        } else {
+          navigate("/customer", { replace: true });
+        }
+      }, 100);
 
       toast({
         title: `Switched to ${targetRole} Account`,
-        description: `You are now in your ${targetRole} dashboard.`,
+        description: `You are now in your ${target_role} dashboard.`,
       });
+
+      // Trigger auth change for navbar update
+      window.dispatchEvent(new Event('authChange'));
+
     } catch (error) {
       console.error("Switch account error:", error);
+
+      let errorMessage = "Failed to switch accounts. Please try again.";
+      if (error.response?.status === 403) {
+        errorMessage = "You don't have permission to access this account type.";
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+
       toast({
         title: "Switch Failed",
-        description: "Failed to switch accounts. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setIsSwitching(false);
     }
   };
 
+  // In ProfileDropdown.jsx - UPDATE handleAutoRegister function
   const handleAutoRegister = async (targetRole) => {
-    if (!user.email) return;
+    if (!currentUser?.email) return;
 
+    // Get the actual password from localStorage
     const tempPassword = localStorage.getItem('temp_password');
 
     if (!tempPassword) {
       toast({
-        title: "Cannot Auto-Register",
+        title: "Password Required",
         description: "Please login again to enable auto-registration.",
         variant: "destructive",
       });
@@ -67,33 +120,46 @@ const ProfileDropdown = () => {
 
     setIsRegistering(true);
     try {
-      const response = await API.post("/register", {
-        email: user.email,
-        password: tempPassword,
-        name: user.name,
-        role: targetRole
+      console.log(`🔄 Auto-registering as ${targetRole}...`);
+
+      const response = await API.post("/auto-register/", {
+        role: targetRole,
+        password: tempPassword  // Send the actual password
       });
 
-      setUser(prev => ({
-        ...prev,
-        has_farmer: response.data.user.has_farmer,
-        has_customer: response.data.user.has_customer
-      }));
+      // Update tokens and user data
+      localStorage.setItem('auth_token', response.data.token);
+      localStorage.setItem('current_role', 'multi');
+
+      // Update user data with MultiAccount info
+      const updatedUser = {
+        ...response.data.user  // Use the user data from response
+      };
+
+      setUser(updatedUser);
+      localStorage.setItem('user_data', JSON.stringify(updatedUser));
 
       toast({
         title: `Registered as ${targetRole} Successfully! 🎉`,
         description: `You now have both farmer and customer accounts.`,
       });
 
+      // Trigger auth change for navbar
+      window.dispatchEvent(new Event('authChange'));
+
+      // Navigate to account choice
       setTimeout(() => {
-        navigate("/account-choice");
+        navigate("/account-choice", { replace: true });
       }, 1500);
 
     } catch (error) {
       console.error("Auto-registration error:", error);
       let errorMessage = "Auto-registration failed. Please try again.";
+
       if (error.response?.status === 400) {
         errorMessage = error.response.data.detail || "Registration failed.";
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
       }
 
       toast({
@@ -106,55 +172,55 @@ const ProfileDropdown = () => {
     }
   };
 
-  // In ProfileDropdown.jsx - update the success handler
   const handleAddressUpdateSuccess = async (newAddress) => {
-    // Update user context with new address
-    setUser(prev => ({
-      ...prev,
-      ...newAddress
-    }));
-
-    // Also refresh user data from server to ensure consistency
     try {
-      const userResponse = await addressAPI.getCurrentAddress();
-      const updatedUser = userResponse.data;
+      console.log("🔄 Refreshing user data after address update...");
 
-      setUser(prev => ({
-        ...prev,
-        ...updatedUser
-      }));
+      // Update local user data immediately
+      const updatedUser = {
+        ...currentUser,
+        ...newAddress
+      };
 
+      setUser(updatedUser);
       localStorage.setItem('user_data', JSON.stringify(updatedUser));
 
+      // Refresh from server
+      await refreshUserData();
+
       toast({
-        title: "Address Updated!",
+        title: "Address Updated! ✅",
         description: "Your address has been saved successfully.",
-        variant: "success"
       });
+
+      // Trigger auth change for navbar update
+      window.dispatchEvent(new Event('authChange'));
+
     } catch (error) {
-      console.error("Failed to refresh user data:", error);
-      // Fallback to just updating with the returned address
-      const storedUser = localStorage.getItem('user_data');
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          const updatedUser = { ...userData, ...newAddress };
-          localStorage.setItem('user_data', JSON.stringify(updatedUser));
-        } catch (e) {
-          console.error("Failed to update localStorage:", e);
-        }
-      }
+      console.error("❌ Error in address update success handler:", error);
+      toast({
+        title: "Address Updated",
+        description: "Your address has been saved.",
+      });
     }
   };
 
   const handleLogout = async () => {
     await logout();
-    navigate("/");
+    window.dispatchEvent(new Event('authChange'));
+    console.log("🔄 Auth change event dispatched for logout");
+    navigate("/", { replace: true });
   };
 
-  if (!user?.email) {
+  if (!currentUser?.email) {
     return null;
   }
+
+  const userRole = currentUser.role || localStorage.getItem('current_role');
+  const canSwitchToFarmer = currentUser.has_farmer && userRole !== 'farmer';
+  const canSwitchToCustomer = currentUser.has_customer && userRole !== 'customer';
+  const canRegisterFarmer = !currentUser.has_farmer;
+  const canRegisterCustomer = !currentUser.has_customer;
 
   return (
     <div className="relative">
@@ -173,18 +239,18 @@ const ProfileDropdown = () => {
           {/* User Info Section */}
           <DropdownMenuLabel className="p-3">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium truncate">{user.name}</p>
+              <p className="text-sm font-medium truncate">{currentUser.name}</p>
               <p className="text-xs text-gray-500 truncate flex items-center gap-1">
                 <Mail className="h-3 w-3" />
-                {user.email}
+                {currentUser.email}
               </p>
               <div className="flex items-center justify-between">
                 <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full capitalize">
-                  {user.role}
+                  {userRole}
                 </span>
                 <div className="flex space-x-1 text-xs text-gray-500">
-                  {user.has_farmer && <span>👨‍🌾</span>}
-                  {user.has_customer && <span>🛒</span>}
+                  {currentUser.has_farmer && <span title="Farmer">👨‍🌾</span>}
+                  {currentUser.has_customer && <span title="Customer">🛒</span>}
                 </div>
               </div>
             </div>
@@ -193,17 +259,31 @@ const ProfileDropdown = () => {
           <DropdownMenuSeparator />
 
           {/* Account Switching Options */}
-          {user.has_farmer && user.has_customer && (
+          {(canSwitchToFarmer || canSwitchToCustomer) && (
             <>
-              {user.role !== 'farmer' && (
-                <DropdownMenuItem onClick={() => handleSwitchAccount("farmer")}>
-                  <Tractor className="h-4 w-4 mr-2" />
+              {canSwitchToFarmer && (
+                <DropdownMenuItem
+                  onClick={() => handleSwitchAccount("farmer")}
+                  disabled={isSwitching}
+                >
+                  {isSwitching ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Tractor className="h-4 w-4 mr-2" />
+                  )}
                   Switch to Farmer
                 </DropdownMenuItem>
               )}
-              {user.role !== 'customer' && (
-                <DropdownMenuItem onClick={() => handleSwitchAccount("customer")}>
-                  <User className="h-4 w-4 mr-2" />
+              {canSwitchToCustomer && (
+                <DropdownMenuItem
+                  onClick={() => handleSwitchAccount("customer")}
+                  disabled={isSwitching}
+                >
+                  {isSwitching ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                  )}
                   Switch to Customer
                 </DropdownMenuItem>
               )}
@@ -212,30 +292,43 @@ const ProfileDropdown = () => {
           )}
 
           {/* Auto Register Option */}
-          {!(user.has_farmer && user.has_customer) && (
+          {(canRegisterFarmer || canRegisterCustomer) && (
             <>
-              <DropdownMenuItem
-                onClick={() => handleAutoRegister(user.has_farmer ? "customer" : "farmer")}
-                disabled={isRegistering}
-                className="text-green-600 focus:text-green-600"
-              >
-                {isRegistering ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <UserPlus className="h-4 w-4 mr-2" />
-                )}
-                {isRegistering ? "Registering..." : `Register as ${user.has_farmer ? "Customer" : "Farmer"}`}
-              </DropdownMenuItem>
+              {canRegisterFarmer && (
+                <DropdownMenuItem
+                  onClick={() => handleAutoRegister("farmer")}
+                  disabled={isRegistering}
+                  className="text-green-600 focus:text-green-600"
+                >
+                  {isRegistering ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {isRegistering ? "Registering..." : "Register as Farmer"}
+                </DropdownMenuItem>
+              )}
+              {canRegisterCustomer && (
+                <DropdownMenuItem
+                  onClick={() => handleAutoRegister("customer")}
+                  disabled={isRegistering}
+                  className="text-green-600 focus:text-green-600"
+                >
+                  {isRegistering ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {isRegistering ? "Registering..." : "Register as Customer"}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
             </>
           )}
 
           {/* Update Address */}
           <DropdownMenuItem
-            onClick={() => {
-              setShowAddressForm(true);
-            }}
-            onSelect={(e) => e.preventDefault()}
+            onClick={() => setShowAddressForm(true)}
           >
             <MapPin className="h-4 w-4 mr-2" />
             Update Address
@@ -247,6 +340,8 @@ const ProfileDropdown = () => {
             Settings
           </DropdownMenuItem>
 
+          <DropdownMenuSeparator />
+
           {/* Logout */}
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="h-4 w-4 mr-2" />
@@ -255,14 +350,14 @@ const ProfileDropdown = () => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Address Form Modal - Rendered outside dropdown context */}
+      {/* Address Form Modal */}
       {showAddressForm && (
         <AddressForm
           isOpen={showAddressForm}
           onClose={() => setShowAddressForm(false)}
           onSuccess={handleAddressUpdateSuccess}
-          user={user}
-          role={user.role}
+          user={currentUser}
+          role={userRole}
         />
       )}
     </div>

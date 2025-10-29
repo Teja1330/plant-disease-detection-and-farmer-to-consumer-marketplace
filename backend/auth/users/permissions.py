@@ -1,5 +1,12 @@
-# users/permissions.py
+# users/permissions.py - CREATE this file if it doesn't exist
 from rest_framework import permissions
+
+class IsAuthenticatedWithJWT(permissions.BasePermission):
+    """
+    Allow access to any authenticated user (farmer or customer)
+    """
+    def has_permission(self, request, view):
+        return request.user and hasattr(request.user, 'id')
 
 class IsFarmerOrMultiAccount(permissions.BasePermission):
     """
@@ -13,9 +20,3 @@ class IsFarmerOrMultiAccount(permissions.BasePermission):
         # Check if user has farmer permissions based on JWT payload
         return getattr(request.user, 'has_farmer', False) or getattr(request.user, 'role', '') == 'farmer'
 
-class IsAuthenticatedWithJWT(permissions.BasePermission):
-    """
-    Allow access to any authenticated user (farmer or customer)
-    """
-    def has_permission(self, request, view):
-        return request.user and hasattr(request.user, 'id')

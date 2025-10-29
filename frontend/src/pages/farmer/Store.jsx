@@ -6,30 +6,39 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea"; 
-import { 
-  Plus, 
-  Leaf, 
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Plus,
+  Leaf,
   Trash2,
   Upload,
   MapPin
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast"; 
+import { useToast } from "@/hooks/use-toast";
 import { handleScroll } from "@/components/Navbar";
 import { farmerAPI } from "@/api";
 import { useUser } from "../../App";
 import AddressForm from "@/components/AddressForm";
+import { hasCompleteAddress, hasNoAddress } from "@/lib/address";
+
 
 const Store = () => {
-  const { toast } = useToast(); 
+  const { toast } = useToast();
   const { user } = useUser();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("products");
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const hasAddress = user?.street_address && user?.city && user?.district && user?.state && user?.pincode;
+  const hasAddress = hasCompleteAddress(user);
+  const noAddress = hasNoAddress(user);
 
-  
+
+  console.log("🏪 Store - User address status:", {
+    hasAddress,
+    noAddress,
+    user: user
+  });
+
   useEffect(() => {
     handleScroll();
     loadProducts();
@@ -128,9 +137,9 @@ const Store = () => {
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
-    
+
     // Check if farmer has address set
-    if (!user.district || !user.street_address || !user.city || !user.state) {
+    if (!hasAddress) {
       toast({
         title: "Address Required",
         description: "Please set your complete address before adding products.",
@@ -138,7 +147,7 @@ const Store = () => {
       });
       return;
     }
-    
+
     if (!newProduct.name || !newProduct.price || !newProduct.unit || !newProduct.description) {
       toast({
         title: "Missing Information",
@@ -150,7 +159,7 @@ const Store = () => {
 
     try {
       setLoading(true);
-      
+
       const formData = new FormData();
       formData.append('name', newProduct.name.trim());
       formData.append('price', parseFloat(newProduct.price));
@@ -160,15 +169,15 @@ const Store = () => {
       formData.append('stock', parseInt(newProduct.stock) || 0);
       formData.append('organic', newProduct.organic.toString());
       formData.append('harvest_date', newProduct.harvest_date);
-      
+
       if (newProduct.image) {
         formData.append('image', newProduct.image);
       }
 
       const response = await farmerAPI.createProduct(formData);
-      
+
       setProducts(prev => [response.data, ...prev]);
-      
+
       setNewProduct({
         name: "",
         price: "",
@@ -247,8 +256,8 @@ const Store = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1 }}
         >
-          <Tabs 
-            value={activeTab} 
+          <Tabs
+            value={activeTab}
             onValueChange={setActiveTab}
             defaultValue="products"
             className="w-full"
@@ -275,20 +284,26 @@ const Store = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {/* Address Check */}
                   {!hasAddress && (
-  <div className="col-span-full text-center py-8 bg-yellow-50 rounded-lg border border-yellow-200">
-    <MapPin className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-    <h3 className="text-lg font-semibold text-yellow-800 mb-2">Address Required</h3>
-    <p className="text-yellow-600 mb-4">You need to set your address before you can add products.</p>
-    <Button 
-      onClick={() => setShowAddressForm(true)}
-      className="bg-yellow-600 hover:bg-yellow-700"
-    >
-      Set Address
-    </Button>
-  </div>
-)}
+                    <div className="col-span-full text-center py-8 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <MapPin className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                        {noAddress ? "Address Required" : "Address Incomplete"}
+                      </h3>
+                      <p className="text-yellow-600 mb-4">
+                        {noAddress
+                          ? "You need to set your address before you can add products."
+                          : "Your address is incomplete. Please complete all address fields."
+                        }
+                      </p>
+                      <Button
+                        onClick={() => setShowAddressForm(true)}
+                        className="bg-yellow-600 hover:bg-yellow-700"
+                      >
+                        {noAddress ? "Set Address" : "Complete Address"}
+                      </Button>
+                    </div>
+                  )}
 
-                  
                   {user.district && products.map((product, index) => (
                     <motion.div
                       key={product.id}
@@ -314,7 +329,7 @@ const Store = () => {
                             <div className={`flex items-center justify-center ${product.image_url ? 'hidden' : 'flex'}`}>
                               <Leaf className="h-8 w-8 text-green-300" />
                             </div>
-                            
+
                             {product.organic && (
                               <Badge className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1 py-0">
                                 Organic
@@ -337,7 +352,7 @@ const Store = () => {
                             <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                               {product.description}
                             </p>
-                            
+
                             <div className="flex items-center justify-between mt-auto">
                               <span className="text-sm font-bold text-green-600">
                                 ${parseFloat(product.price).toFixed(2)}/{product.unit}
@@ -368,7 +383,7 @@ const Store = () => {
                   <Leaf className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">No products yet</h3>
                   <p className="text-gray-600 mb-6">Add your first product to start selling</p>
-                  <Button 
+                  <Button
                     onClick={() => setActiveTab("add-product")}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
@@ -406,9 +421,9 @@ const Store = () => {
                           <label htmlFor="product-image" className="cursor-pointer">
                             {newProduct.image ? (
                               <div className="space-y-2">
-                                <img 
-                                  src={URL.createObjectURL(newProduct.image)} 
-                                  alt="Preview" 
+                                <img
+                                  src={URL.createObjectURL(newProduct.image)}
+                                  alt="Preview"
                                   className="mx-auto h-32 w-32 object-cover rounded-lg"
                                 />
                                 <p className="text-sm text-green-600">Image selected: {newProduct.image.name}</p>
@@ -486,7 +501,7 @@ const Store = () => {
                           />
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Description *</label>
                         <Textarea
@@ -510,9 +525,9 @@ const Store = () => {
                         </label>
                       </div>
 
-                      <Button 
-                        type="submit" 
-                        disabled={loading || !user.district}
+                      <Button
+                        type="submit"
+                        disabled={loading || !hasAddress}
                         className="bg-blue-600 hover:bg-blue-700 w-full"
                       >
                         {loading ? (
@@ -525,7 +540,7 @@ const Store = () => {
                         )}
                       </Button>
 
-                      {!user.district && (
+                      {!hasAddress && (
                         <p className="text-sm text-yellow-600 text-center">
                           Please set your address first to add products
                         </p>

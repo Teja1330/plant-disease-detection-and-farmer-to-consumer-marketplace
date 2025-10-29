@@ -1,4 +1,6 @@
-﻿import { Link, useLocation, useNavigate } from "react-router-dom";
+﻿// components/Navbar.jsx - COMPLETELY FIXED
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useUser } from "../App";
@@ -10,39 +12,55 @@ import {
   ClipboardList,
   Package,
   Camera,
+  LogOut
 } from "lucide-react";
 import ProfileDropdown from "./ProfileDropdown";
-import { useEffect, useState } from "react";
-
 
 const Navbar = () => {
   const { user, logout } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
-  const [userName, setUserName] = useState(''); // ADD STATE
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // Sync user data on mount and when user changes
   useEffect(() => {
-    if (user?.name) {
-      setUserName(user.name);
-    } else {
-      // Try to get from localStorage or make API call
-      const storedUser = localStorage.getItem('user_data');
-      if (storedUser) {
-        try {
+    const syncUserData = () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const storedUser = localStorage.getItem('user_data');
+        
+        if (token && storedUser) {
           const userData = JSON.parse(storedUser);
-          setUserName(userData.name || 'User');
-        } catch (e) {
-          setUserName('User');
+          setCurrentUser(userData);
+          setIsLoggedIn(true);
+          console.log("🔄 Navbar - User authenticated:", userData);
+        } else {
+          setCurrentUser(null);
+          setIsLoggedIn(false);
+          console.log("🔄 Navbar - No user authenticated");
         }
+      } catch (error) {
+        console.error("❌ Navbar - Error syncing user data:", error);
+        setCurrentUser(null);
+        setIsLoggedIn(false);
       }
-    }
+    };
+
+    syncUserData();
+    
+    // Listen for auth changes
+    const handleAuthChange = () => {
+      console.log("🔄 Navbar - Auth change detected");
+      syncUserData();
+    };
+
+    window.addEventListener('authChange', handleAuthChange);
+    
+    return () => {
+      window.removeEventListener('authChange', handleAuthChange);
+    };
   }, [user]);
-
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
 
   // Public navbar links
   const publicLinks = [
@@ -69,10 +87,44 @@ const Navbar = () => {
   ];
 
   const getActiveLinks = () => {
-    if (user?.role === "customer") return customerLinks;
-    if (user?.role === "farmer") return farmerLinks;
+    if (!isLoggedIn || !currentUser) {
+      return publicLinks;
+    }
+    
+    const userRole = currentUser.role || localStorage.getItem('current_role');
+    
+    console.log("🔍 Navbar - Determining links for role:", userRole);
+    
+    if (userRole === "customer") return customerLinks;
+    if (userRole === "farmer") return farmerLinks;
+    if (userRole === "multi") {
+      const currentRole = localStorage.getItem('current_role');
+      if (currentRole === "farmer") return farmerLinks;
+      if (currentRole === "customer") return customerLinks;
+    }
+    
     return publicLinks;
   };
+
+  const handleNavigation = (to) => {
+    console.log("🔄 Navigating to:", to);
+    navigate(to);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    window.dispatchEvent(new Event('authChange'));
+    navigate("/");
+  };
+
+  const activeLinks = getActiveLinks();
+
+  console.log("🔍 Navbar State:", {
+    isLoggedIn,
+    currentUser: currentUser?.email,
+    activeLinks: activeLinks.length,
+    location: location.pathname
+  });
 
   return (
     <motion.nav
@@ -82,8 +134,11 @@ const Navbar = () => {
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo - Using public folder logo */}
-          <Link to="/" className="flex items-center space-x-3 group">
+          {/* Logo */}
+          <div 
+            className="flex items-center space-x-3 group cursor-pointer"
+            onClick={() => handleNavigation("/")}
+          >
             <motion.div
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 300 }}
@@ -93,72 +148,82 @@ const Navbar = () => {
                 src="/assets/leaf-logo.png"
                 alt="AgriCare Logo"
                 className="h-8 w-8 object-contain"
-                onError={(e) => {
-                  console.error("Logo failed to load");
-                }}
               />
               <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
                 AgriCare
               </span>
             </motion.div>
-          </Link>
+          </div>
 
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-1">
-            {getActiveLinks().map((link) => {
+            {activeLinks.map((link) => {
               const Icon = link.icon;
               const isActive = location.pathname === link.to;
+              
               return (
-                <Link key={link.to} to={link.to}>
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${isActive
-                        ? "bg-green-600 text-white shadow-md"
-                        : "hover:bg-gray-100 text-gray-700"
-                      }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="text-sm font-medium">{link.label}</span>
-                  </motion.div>
-                </Link>
+                <motion.div
+                  key={link.to}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? "bg-green-600 text-white shadow-md"
+                      : "hover:bg-gray-100 text-gray-700"
+                  }`}
+                  onClick={() => handleNavigation(link.to)}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-sm font-medium">{link.label}</span>
+                </motion.div>
               );
             })}
           </div>
 
           {/* Right side buttons */}
           <div className="flex items-center space-x-3">
-            {user?.email ? (
+            {isLoggedIn ? (
               <div className="flex items-center space-x-3">
-                {/* User info - Only show name if there's enough space */}
+                {/* User info */}
                 <div className="hidden lg:flex items-center space-x-2 text-sm">
                   <span className="text-gray-700 font-medium truncate max-w-[120px]">
-                    {userName || user?.name || 'User'} {/* UPDATED THIS LINE */}
+                    {currentUser?.name || 'User'}
                   </span>
                   <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full capitalize">
-                    {user?.role || localStorage.getItem('current_role') || 'user'} {/* UPDATED THIS LINE */}
+                    {currentUser?.role || localStorage.getItem('current_role') || 'user'}
                   </span>
                 </div>
+
+                {/* Quick Logout Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="hidden sm:flex items-center space-x-1 border-red-200 text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </Button>
 
                 {/* Profile Dropdown */}
                 <ProfileDropdown />
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <Link to="/login">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
-                  >
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/signup">
-                  <Button className="bg-green-600 hover:bg-green-700 text-white shadow-md">
-                    Sign Up
-                  </Button>
-                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+                  onClick={() => handleNavigation("/login")}
+                >
+                  Login
+                </Button>
+                <Button 
+                  className="bg-green-600 hover:bg-green-700 text-white shadow-md"
+                  onClick={() => handleNavigation("/signup")}
+                >
+                  Sign Up
+                </Button>
               </div>
             )}
           </div>
