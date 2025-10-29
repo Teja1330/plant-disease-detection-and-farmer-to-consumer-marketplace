@@ -39,6 +39,7 @@ API.interceptors.response.use(
     console.log('✅ Response received:', {
       status: response.status,
       url: response.config.url,
+      data: response.data
     });
     
     // If this is a login response, store the token
@@ -70,8 +71,6 @@ API.interceptors.response.use(
 
 export default API;
 
-
-
 // Plant Detection API
 export const plantDetectionAPI = {
   detect: (imageFile) => {
@@ -97,8 +96,6 @@ export const plantDetectionAPI = {
     }
   }
 };
-
-
 
 // Farmer API
 export const farmerAPI = {
@@ -134,8 +131,6 @@ export const farmerAPI = {
   }
 };
 
-
-
 // Customer API
 export const customerAPI = {
   // Marketplace
@@ -170,8 +165,6 @@ export const customerAPI = {
   }
 };
 
-
-
 export const authAPI = {
   logout: () => {
     return API.post('/logout');
@@ -185,8 +178,6 @@ export const authAPI = {
     return API.get('/user');
   }
 };
-
-
 
 export const addressAPI = {
   updateAddress: (addressData) => {

@@ -1,4 +1,4 @@
-﻿// App.jsx - COMPLETELY FIXED
+﻿// App.jsx - COMPLETELY FIXED FOR PREFIX IDS
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import API from "./api";
@@ -27,7 +27,7 @@ import AccountChoice from "./pages/AccountChoice";
 const UserContext = createContext(null);
 export const useUser = () => useContext(UserContext);
 
-// Protected Route Component - SIMPLIFIED AND FIXED
+// Protected Route Component - UPDATED FOR PREFIX IDS
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, loading } = useUser();
 
@@ -67,6 +67,7 @@ const NavigationHandler = () => {
 // Main App Content Component
 const AppContent = () => {
   const [user, setUser] = useState({
+    id: null, // Now handles prefix IDs: F1, C1, M1, etc.
     role: null,
     name: null,
     email: null,
@@ -96,6 +97,7 @@ const AppContent = () => {
       localStorage.removeItem('cart');
 
       setUser({
+        id: null,
         role: null,
         name: null,
         email: null,
@@ -114,7 +116,7 @@ const AppContent = () => {
     }
   };
 
-  // Fetch user on page load - SIMPLIFIED AND FIXED
+  // Fetch user on page load - UPDATED FOR PREFIX IDS
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -131,7 +133,11 @@ const AppContent = () => {
           try {
             const userData = JSON.parse(storedUser);
             setUser(userData);
-            console.log("✅ User loaded from localStorage:", userData);
+            console.log("✅ User loaded from localStorage:", {
+              id: userData.id, // Prefix ID
+              name: userData.name,
+              role: userData.role
+            });
           } catch (e) {
             console.error("Error parsing stored user data:", e);
           }
@@ -142,9 +148,16 @@ const AppContent = () => {
         const response = await API.get("/user");
         const userData = response.data;
 
-        console.log("✅ Fresh user data from API:", userData);
+        console.log("✅ Fresh user data from API:", {
+          id: userData.id, // Prefix ID (F1, C1, M1, etc.)
+          name: userData.name,
+          role: userData.role,
+          has_farmer: userData.has_farmer,
+          has_customer: userData.has_customer
+        });
 
         const updatedUser = {
+          id: userData.id, // Store prefix ID
           email: userData.email,
           name: userData.name,
           role: userData.role || (userData.has_farmer ? 'farmer' : 'customer'),
@@ -185,7 +198,7 @@ const AppContent = () => {
     fetchUser();
   }, []);
 
-  // Function to refresh user data
+  // Function to refresh user data - UPDATED FOR PREFIX IDS
   const refreshUserData = async () => {
     try {
       console.log("🔄 Manually refreshing user data...");
@@ -193,6 +206,7 @@ const AppContent = () => {
       const userData = response.data;
 
       const updatedUser = {
+        id: userData.id, // Store prefix ID
         email: userData.email,
         name: userData.name,
         role: userData.role || (userData.has_farmer ? 'farmer' : 'customer'),
@@ -210,7 +224,7 @@ const AppContent = () => {
       setUser(updatedUser);
       localStorage.setItem('user_data', JSON.stringify(updatedUser));
 
-      console.log("✅ User data refreshed successfully");
+      console.log("✅ User data refreshed successfully - ID:", updatedUser.id);
       return true;
     } catch (error) {
       console.error("❌ Failed to refresh user data:", error);

@@ -24,8 +24,6 @@ const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // In Login.jsx - Replace the entire handleLogin function:
-
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -58,14 +56,19 @@ const Login = () => {
 
       const { token, user: userData } = loginResponse.data;
 
-      console.log("🔍 Login user data:", userData);
+      console.log("🔍 Login user data:", {
+        id: userData.id, // Prefix ID (F1, C1, M1)
+        name: userData.name,
+        role: userData.role,
+        email: userData.email
+      });
 
       // 2️⃣ Store token and role in localStorage for persistence
       localStorage.setItem('auth_token', token);
       localStorage.setItem('current_role', userData.role);
       localStorage.setItem('temp_password', password);
 
-      // 3️⃣ Store the user data immediately from login response
+      // 3️⃣ Store the user data immediately from login response (with prefix ID)
       localStorage.setItem('user_data', JSON.stringify(userData));
 
       // Update user context with the data from login response
@@ -75,7 +78,11 @@ const Login = () => {
       window.dispatchEvent(new Event('authChange'));
       console.log("🔄 Auth change event dispatched");
 
-      console.log("✅ Login successful - User data:", userData);
+      console.log("✅ Login successful - User data:", {
+        id: userData.id, // Prefix ID
+        name: userData.name,
+        role: userData.role
+      });
 
       // Determine navigation path based on ACTUAL user data from login
       let targetPath = "/";

@@ -1,4 +1,4 @@
-﻿// Marketplace.jsx - Updated version
+﻿// Marketplace.jsx - Updated version - UPDATED FOR PREFIX IDS
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,6 @@ const Marketplace = () => {
   const [customerPincode, setCustomerPincode] = useState("");
   const [customerDistrict, setCustomerDistrict] = useState("");
 
-
   useEffect(() => {
     handleScroll();
     // Load cart from localStorage on component mount
@@ -40,13 +39,17 @@ const Marketplace = () => {
     loadMarketplaceProducts();
   }, []);
 
-  // In the loadMarketplaceProducts function, update:
   const loadMarketplaceProducts = async () => {
     try {
       setLoading(true);
+      console.log("🔄 Loading marketplace products...");
       const response = await customerAPI.getMarketplaceProducts();
       setProducts(response.data.products || []);
-      setCustomerDistrict(response.data.customer_district || ""); // FIX: customer_district not customerDistrict
+      setCustomerDistrict(response.data.customer_district || "");
+      console.log("✅ Marketplace products loaded:", {
+        productCount: response.data.products?.length,
+        customerDistrict: response.data.customer_district
+      });
     } catch (error) {
       console.error("Failed to load marketplace products:", error);
       toast({
@@ -102,6 +105,11 @@ const Marketplace = () => {
 
     localStorage.setItem('cart', JSON.stringify(existingCart));
     setCart(existingCart);
+    
+    console.log("🛒 Cart updated:", {
+      product: product.name,
+      cartCount: existingCart.length
+    });
   };
 
   const renderStars = (rating) => {
@@ -294,7 +302,7 @@ const Marketplace = () => {
             Showing {filteredProducts.length} products
             {selectedCategory !== "All" && ` in ${selectedCategory}`}
             {searchQuery && ` matching "${searchQuery}"`}
-            {customerDistrict && ` from farmers in ${customerDistrict}`} {/* FIX: customerDistrict */}
+            {customerDistrict && ` from farmers in ${customerDistrict}`}
           </p>
         </motion.div>
 

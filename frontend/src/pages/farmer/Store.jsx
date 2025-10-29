@@ -1,4 +1,4 @@
-﻿// Store.jsx - Fixed number input handling with address validation
+﻿// Store.jsx - Fixed number input handling with address validation - UPDATED FOR PREFIX IDS
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ import { useUser } from "../../App";
 import AddressForm from "@/components/AddressForm";
 import { hasCompleteAddress, hasNoAddress } from "@/lib/address";
 
-
 const Store = () => {
   const { toast } = useToast();
   const { user } = useUser();
@@ -32,8 +31,8 @@ const Store = () => {
   const hasAddress = hasCompleteAddress(user);
   const noAddress = hasNoAddress(user);
 
-
   console.log("🏪 Store - User address status:", {
+    id: user?.id, // Prefix ID
     hasAddress,
     noAddress,
     user: user
@@ -61,8 +60,10 @@ const Store = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
+      console.log("🔄 Loading products for user:", { id: user?.id }); // Prefix ID
       const response = await farmerAPI.getProducts();
       setProducts(response.data);
+      console.log("✅ Products loaded:", response.data.length);
     } catch (error) {
       console.error("Failed to load products:", error);
       toast({
@@ -159,6 +160,7 @@ const Store = () => {
 
     try {
       setLoading(true);
+      console.log("🔄 Adding product for user:", { id: user?.id }); // Prefix ID
 
       const formData = new FormData();
       formData.append('name', newProduct.name.trim());
@@ -213,6 +215,7 @@ const Store = () => {
 
   const handleDeleteProduct = async (productId) => {
     try {
+      console.log("🔄 Deleting product:", productId);
       await farmerAPI.deleteProduct(productId);
       setProducts(prev => prev.filter(p => p.id !== productId));
       toast({

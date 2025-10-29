@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { User, Tractor, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { authAPI } from "@/api"; // ADD THIS IMPORT
+import { authAPI } from "@/api";
 import { useEffect } from "react";
 
 const AccountChoice = () => {
@@ -14,19 +14,47 @@ const AccountChoice = () => {
   useEffect(() => {
     // Check if user actually has both accounts
     const token = localStorage.getItem('auth_token');
+    const userData = localStorage.getItem('user_data');
+    
     if (!token) {
       navigate('/login');
       return;
+    }
+
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        console.log("🔍 AccountChoice - User data:", {
+          id: user.id, // Prefix ID
+          name: user.name,
+          has_farmer: user.has_farmer,
+          has_customer: user.has_customer
+        });
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
     }
   }, [navigate]);
 
   const handleAccountSelect = async (role) => {
     try {
-      const response = await authAPI.switchAccount(role); // Use authAPI instead of API
+      console.log(`🔄 Switching to ${role} account...`);
+      
+      const response = await authAPI.switchAccount(role);
       
       localStorage.setItem('auth_token', response.data.token);
       localStorage.setItem('current_role', role);
       
+      // Update user data with new role
+      const storedUser = localStorage.getItem('user_data');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        const updatedUser = { ...userData, role: role };
+        localStorage.setItem('user_data', JSON.stringify(updatedUser));
+      }
+
+      console.log(`✅ Switched to ${role} account successfully`);
+
       toast({
         title: `Switched to ${role} account`,
         description: `You are now logged in as a ${role}`,

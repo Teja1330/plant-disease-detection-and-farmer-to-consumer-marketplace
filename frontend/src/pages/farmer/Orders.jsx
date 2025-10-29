@@ -39,8 +39,10 @@ const Orders = () => {
   const loadOrders = async () => {
     try {
       setLoading(true);
+      console.log("🔄 Loading orders...");
       const response = await farmerAPI.getOrders();
       setOrders(response.data);
+      console.log("✅ Orders loaded:", response.data.length);
     } catch (error) {
       console.error("Failed to load orders:", error);
       toast({
@@ -56,6 +58,7 @@ const Orders = () => {
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       setUpdatingOrder(orderId);
+      console.log("🔄 Updating order status:", { orderId, newStatus });
       await farmerAPI.updateOrderStatus(orderId, newStatus);
       
       setOrders(prev => prev.map(order => 

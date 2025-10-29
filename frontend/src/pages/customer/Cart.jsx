@@ -1,4 +1,4 @@
-﻿// Cart.jsx - Fixed version
+﻿// Cart.jsx - Fixed version - UPDATED FOR PREFIX IDS
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -25,8 +25,6 @@ import { useUser } from "../../App";
 import AddressForm from "@/components/AddressForm";
 import { hasCompleteAddress, hasNoAddress } from "@/lib/address";
 
-
-
 const Cart = () => {
   const { toast } = useToast();
   const [cartItems, setCartItems] = useState([]);
@@ -36,13 +34,12 @@ const Cart = () => {
   const hasAddress = hasCompleteAddress(user);
   const noAddress = hasNoAddress(user);
 
-
   console.log("🛒 Cart - User address status:", {
+    id: user?.id, // Prefix ID
     hasAddress,
     noAddress,
     user: user
   });
-
 
   useEffect(() => {
     handleScroll();
@@ -134,9 +131,9 @@ const Cart = () => {
       return;
     }
 
-
     try {
       setLoading(true);
+      console.log("🔄 Processing checkout...");
 
       // Prepare cart items for API
       const cartItemsForAPI = cartItems.map(item => ({
@@ -149,6 +146,8 @@ const Cart = () => {
       const response = await customerAPI.createOrder({
         cart_items: cartItemsForAPI
       });
+
+      console.log("✅ Order created successfully:", response.data.order.order_id);
 
       toast({
         title: "Order Placed! 🎉",
@@ -431,7 +430,6 @@ const Cart = () => {
                       </>
                     )}
                   </Button>
-
 
                   <div className="space-y-2 text-xs text-gray-500">
                     <p className="flex items-center">

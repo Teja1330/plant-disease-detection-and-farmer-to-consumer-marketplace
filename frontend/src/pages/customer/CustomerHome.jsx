@@ -98,6 +98,11 @@ const CustomerHome = () => {
       // Save updated cart to localStorage
       localStorage.setItem('cart', JSON.stringify(cart));
       
+      console.log("🛒 Added to cart:", {
+        product: product.name,
+        cartCount: cart.length
+      });
+      
       toast({
         title: "Added to cart! 🛒",
         description: `${product.name} has been added to your cart.`,
@@ -250,47 +255,47 @@ const CustomerHome = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
               >
-                <Card className="hover:shadow-lg transition-all duration-300 bg-white border border-gray-200">
-                  <CardContent className="p-0">
-                    <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center">
-                      <Leaf className="h-12 w-12 text-green-300" />
+              <Card className="hover:shadow-lg transition-all duration-300 bg-white border border-gray-200">
+                <CardContent className="p-0">
+                  <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center">
+                    <Leaf className="h-12 w-12 text-green-300" />
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                      <p className="text-sm text-gray-600">{product.farmer}</p>
                     </div>
-                    <div className="p-4 space-y-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{product.name}</h3>
-                        <p className="text-sm text-gray-600">{product.farmer}</p>
+                    
+                    <div className="flex items-center space-x-1">
+                      {renderStars(product.rating)}
+                      <span className="text-sm font-medium">{product.rating}</span>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center text-xs text-gray-500">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {product.location}
                       </div>
-                      
-                      <div className="flex items-center space-x-1">
-                        {renderStars(product.rating)}
-                        <span className="text-sm font-medium">{product.rating}</span>
-                      </div>
-                      
-                      <div className="space-y-1">
-                        <div className="flex items-center text-xs text-gray-500">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          {product.location}
-                        </div>
-                        <div className="flex items-center text-xs text-gray-500">
-                          <Clock className="h-3 w-3 mr-1" />
-                          Harvested {product.harvestDate}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-green-600">${product.price.toFixed(2)}/{product.unit}</span>
-                        <Button 
-                          size="sm" 
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => handleAddToCart(product)}
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-1" />
-                          Add
-                        </Button>
+                      <div className="flex items-center text-xs text-gray-500">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Harvested {product.harvestDate}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold text-green-600">${product.price.toFixed(2)}/{product.unit}</span>
+                      <Button 
+                        size="sm" 
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleAddToCart(product)}
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
               </motion.div>
             ))}
           </div>

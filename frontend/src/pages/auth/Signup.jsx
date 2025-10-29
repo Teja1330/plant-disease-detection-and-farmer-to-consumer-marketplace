@@ -145,6 +145,13 @@ const Signup = () => {
 
       const response = await API.post("/register", registrationData);
 
+      console.log("✅ Registration successful - User data:", {
+        id: response.data.user.id, // Prefix ID (F1, C1, M1)
+        name: response.data.user.name,
+        role: response.data.user.role,
+        email: response.data.user.email
+      });
+
       toast({
         title: "Account Created Successfully! 🎉",
         description: `You are now registered as a ${selectedRole}.`,
@@ -158,9 +165,15 @@ const Signup = () => {
       const completeUserResponse = await API.get("/user");
       const completeUserData = completeUserResponse.data;
 
-      console.log("✅ Complete user data after registration:", completeUserData);
+      console.log("✅ Complete user data after registration:", {
+        id: completeUserData.id, // Prefix ID
+        name: completeUserData.name,
+        role: completeUserData.role,
+        has_farmer: completeUserData.has_farmer,
+        has_customer: completeUserData.has_customer
+      });
 
-      // Store complete user data
+      // Store complete user data with prefix ID
       localStorage.setItem('user_data', JSON.stringify(completeUserData));
 
       // Update user context
@@ -168,11 +181,6 @@ const Signup = () => {
 
       window.dispatchEvent(new Event('authChange'));
       console.log("🔄 Auth change event dispatched");
-
-      // In Signup.jsx - Replace the navigation logic in handleSignup function:
-
-      // Replace the setTimeout navigation block with:
-      console.log("✅ User context updated with complete registration data");
 
       // Determine navigation path
       let targetPath = selectedRole === "farmer" ? "/farmer" : "/customer";

@@ -20,12 +20,12 @@ def get_farmer_instance(user):
     """
     Get Farmer instance from any user type (Farmer, Customer, MultiAccount)
     """
-    # If user is directly a Farmer
-    if isinstance(user, Farmer):
+    if hasattr(user, 'id') and user.id.startswith('F'):
+        # Direct farmer
         return user
     
-    # If user is MultiAccount
-    if isinstance(user, MultiAccount):
+    elif hasattr(user, 'id') and user.id.startswith('M'):
+        # MultiAccount user
         return user.farmer
     
     # If user is Customer or other type, try to find by email

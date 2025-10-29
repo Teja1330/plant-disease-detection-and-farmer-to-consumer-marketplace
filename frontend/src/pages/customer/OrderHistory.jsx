@@ -1,4 +1,4 @@
-﻿// OrderHistory.jsx - Updated version
+﻿// OrderHistory.jsx - Updated version - UPDATED FOR PREFIX IDS
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +23,10 @@ const OrderHistory = () => {
   const loadOrders = async () => {
     try {
       setLoading(true);
+      console.log("🔄 Loading order history...");
       const response = await customerAPI.getOrders();
       setOrders(response.data || []);
+      console.log("✅ Order history loaded:", response.data?.length || 0);
     } catch (error) {
       console.error("Failed to load orders:", error);
       toast({
@@ -94,6 +96,11 @@ const OrderHistory = () => {
     });
 
     localStorage.setItem('cart', JSON.stringify(existingCart));
+
+    console.log("🛒 Reordered items:", {
+      orderId: order.order_id,
+      cartCount: existingCart.length
+    });
 
     toast({
       title: "Order Recreated! 🛒",

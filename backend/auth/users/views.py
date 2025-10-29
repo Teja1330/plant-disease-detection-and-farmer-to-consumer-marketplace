@@ -258,7 +258,7 @@ class LoginView(APIView):
 
             # Return user data based on actual user type
             user_data = {
-                'id': user_id,
+                'id': user_instance.id,  # This will be F1, C1, M1, etc.
                 'name': user_name,
                 'email': email,
                 'role': role,
@@ -401,9 +401,9 @@ class SwitchAccountView(APIView):
             has_customer = True
             # For MultiAccount users, we need to get the actual Farmer/Customer ID
             if target_role == 'farmer':
-                new_user_id = multi_account.farmer.id
+                new_user_id = multi_account.farmer.id  # This will be F1, F2, etc.
             else:  # customer
-                new_user_id = multi_account.customer.id
+                new_user_id = multi_account.customer.id  # This will be C1, C2, etc.
             print(f"✅ User is MultiAccount - switching to {target_role} with ID: {new_user_id}")
         else:
             # Check individual tables

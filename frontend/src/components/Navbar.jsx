@@ -1,4 +1,4 @@
-﻿// components/Navbar.jsx - COMPLETELY FIXED
+﻿// components/Navbar.jsx - COMPLETELY FIXED FOR PREFIX IDS
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -34,7 +34,11 @@ const Navbar = () => {
           const userData = JSON.parse(storedUser);
           setCurrentUser(userData);
           setIsLoggedIn(true);
-          console.log("🔄 Navbar - User authenticated:", userData);
+          console.log("🔄 Navbar - User authenticated:", {
+            id: userData.id, // Prefix ID
+            name: userData.name,
+            role: userData.role
+          });
         } else {
           setCurrentUser(null);
           setIsLoggedIn(false);
@@ -93,7 +97,10 @@ const Navbar = () => {
     
     const userRole = currentUser.role || localStorage.getItem('current_role');
     
-    console.log("🔍 Navbar - Determining links for role:", userRole);
+    console.log("🔍 Navbar - Determining links for:", {
+      id: currentUser.id, // Prefix ID
+      role: userRole
+    });
     
     if (userRole === "customer") return customerLinks;
     if (userRole === "farmer") return farmerLinks;
@@ -121,7 +128,8 @@ const Navbar = () => {
 
   console.log("🔍 Navbar State:", {
     isLoggedIn,
-    currentUser: currentUser?.email,
+    currentUserId: currentUser?.id, // Prefix ID
+    currentUserEmail: currentUser?.email,
     activeLinks: activeLinks.length,
     location: location.pathname
   });
@@ -191,6 +199,9 @@ const Navbar = () => {
                   </span>
                   <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full capitalize">
                     {currentUser?.role || localStorage.getItem('current_role') || 'user'}
+                  </span>
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-mono">
+                    ID: {currentUser?.id || 'N/A'} {/* Display prefix ID */}
                   </span>
                 </div>
 

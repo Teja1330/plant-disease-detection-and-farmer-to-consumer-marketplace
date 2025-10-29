@@ -29,8 +29,10 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
+      console.log("🔄 Loading dashboard data...");
       const response = await farmerAPI.getDashboard();
       setDashboardData(response.data);
+      console.log("✅ Dashboard data loaded successfully");
     } catch (error) {
       console.error("Failed to load dashboard:", error);
       toast({

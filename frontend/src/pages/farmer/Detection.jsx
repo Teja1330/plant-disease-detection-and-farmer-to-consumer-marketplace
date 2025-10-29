@@ -1,4 +1,4 @@
-﻿// Detection.jsx - Complete updated version
+﻿// Detection.jsx - Complete updated version - UPDATED FOR PREFIX IDS
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -67,8 +67,15 @@ const Detection = () => {
 
     setLoading(true);
     try {
+      console.log("🔄 Starting plant detection...");
       const response = await plantDetectionAPI.detect(selectedFile);
       const detectionResult = response.data;
+
+      console.log("✅ Detection completed:", {
+        id: detectionResult.id,
+        prediction: detectionResult.prediction,
+        confidence: detectionResult.confidence
+      });
 
       setResult(detectionResult);
 
@@ -137,6 +144,7 @@ const Detection = () => {
   const handleDeleteHistory = async (detectionId = null) => {
     try {
       setDeletingId(detectionId);
+      console.log("🔄 Deleting detection history:", detectionId);
       await plantDetectionAPI.deleteHistory(detectionId);
 
       if (detectionId) {

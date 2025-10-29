@@ -1,4 +1,4 @@
-// components/AddressForm.jsx
+// components/AddressForm.jsx - UPDATED FOR PREFIX IDS
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -53,14 +53,24 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
     }
   };
 
-  // In AddressForm.jsx - update the loadExistingAddress function
   const loadExistingAddress = async () => {
     try {
-      console.log("🔄 Loading existing address...");
+      console.log("🔄 Loading existing address for user:", {
+        id: user?.id, // Prefix ID
+        role: role
+      });
+      
       const response = await addressAPI.getCurrentAddress();
       const userData = response.data;
 
-      console.log("📦 User data from API:", userData);
+      console.log("📦 User data from API:", {
+        id: userData.id, // Prefix ID
+        street: userData.street_address,
+        city: userData.city,
+        district: userData.district,
+        state: userData.state,
+        pincode: userData.pincode
+      });
 
       // Check if user has complete address (handle empty strings)
       const hasAddress = userData.street_address && userData.street_address.trim() !== '' &&
@@ -70,14 +80,6 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
         userData.pincode && userData.pincode.trim() !== '';
 
       console.log("✅ Has complete address:", hasAddress);
-      console.log("📍 Address fields:", {
-        street: userData.street_address,
-        city: userData.city,
-        district: userData.district,
-        state: userData.state,
-        pincode: userData.pincode
-      });
-
       setHasExistingAddress(hasAddress);
 
       // Always pre-fill form with whatever data exists (even empty strings)
@@ -134,12 +136,16 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
 
     try {
       setLoading(true);
-      console.log("🔄 Updating address with data:", formData);
+      console.log("🔄 Updating address for user:", {
+        id: user?.id, // Prefix ID
+        role: role,
+        addressData: formData
+      });
 
       const response = await addressAPI.updateAddress(formData);
       console.log("✅ Address update response:", response.data);
 
-      // 🆕 REFRESH USER DATA AFTER ADDRESS UPDATE
+      // Refresh user data after address update
       console.log("🔄 Refreshing user data after address update...");
       try {
         const userResponse = await addressAPI.getCurrentAddress();
@@ -149,7 +155,7 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
         setUser(updatedUserData);
         localStorage.setItem('user_data', JSON.stringify(updatedUserData));
 
-        console.log("✅ User data refreshed after address update");
+        console.log("✅ User data refreshed after address update - ID:", updatedUserData.id);
       } catch (refreshError) {
         console.error("❌ Failed to refresh user data:", refreshError);
       }

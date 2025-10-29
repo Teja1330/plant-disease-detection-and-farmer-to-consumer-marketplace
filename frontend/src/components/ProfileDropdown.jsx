@@ -1,4 +1,4 @@
-// components/ProfileDropdown.jsx - COMPLETELY FIXED
+// components/ProfileDropdown.jsx - COMPLETELY FIXED FOR PREFIX IDS
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +30,15 @@ const ProfileDropdown = () => {
     try {
       const storedUser = localStorage.getItem('user_data');
       if (storedUser) {
-        return JSON.parse(storedUser);
+        const userData = JSON.parse(storedUser);
+        console.log("🔍 ProfileDropdown - Current user:", {
+          id: userData.id, // Prefix ID
+          name: userData.name,
+          role: userData.role,
+          has_farmer: userData.has_farmer,
+          has_customer: userData.has_customer
+        });
+        return userData;
       }
     } catch (error) {
       console.error("Error parsing user data:", error);
@@ -45,7 +53,10 @@ const ProfileDropdown = () => {
 
     try {
       setIsSwitching(true);
-      console.log(`🔄 Switching to ${targetRole} account...`);
+      console.log(`🔄 Switching to ${targetRole} account for user:`, {
+        currentId: currentUser.id, // Prefix ID
+        targetRole: targetRole
+      });
 
       const response = await authAPI.switchAccount(targetRole);
 
@@ -76,7 +87,7 @@ const ProfileDropdown = () => {
 
       toast({
         title: `Switched to ${targetRole} Account`,
-        description: `You are now in your ${target_role} dashboard.`,
+        description: `You are now in your ${targetRole} dashboard.`,
       });
 
       // Trigger auth change for navbar update
@@ -102,7 +113,6 @@ const ProfileDropdown = () => {
     }
   };
 
-  // In ProfileDropdown.jsx - UPDATE handleAutoRegister function
   const handleAutoRegister = async (targetRole) => {
     if (!currentUser?.email) return;
 
@@ -120,7 +130,10 @@ const ProfileDropdown = () => {
 
     setIsRegistering(true);
     try {
-      console.log(`🔄 Auto-registering as ${targetRole}...`);
+      console.log(`🔄 Auto-registering as ${targetRole} for user:`, {
+        currentId: currentUser.id, // Prefix ID
+        targetRole: targetRole
+      });
 
       const response = await API.post("/auto-register/", {
         role: targetRole,
@@ -138,6 +151,13 @@ const ProfileDropdown = () => {
 
       setUser(updatedUser);
       localStorage.setItem('user_data', JSON.stringify(updatedUser));
+
+      console.log("✅ Auto-registration successful - New user:", {
+        id: updatedUser.id, // New prefix ID (M1, etc.)
+        role: updatedUser.role,
+        has_farmer: updatedUser.has_farmer,
+        has_customer: updatedUser.has_customer
+      });
 
       toast({
         title: `Registered as ${targetRole} Successfully! 🎉`,
@@ -248,10 +268,13 @@ const ProfileDropdown = () => {
                 <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full capitalize">
                   {userRole}
                 </span>
-                <div className="flex space-x-1 text-xs text-gray-500">
-                  {currentUser.has_farmer && <span title="Farmer">👨‍🌾</span>}
-                  {currentUser.has_customer && <span title="Customer">🛒</span>}
-                </div>
+                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-mono">
+                  {currentUser.id} {/* Display prefix ID */}
+                </span>
+              </div>
+              <div className="flex space-x-1 text-xs text-gray-500">
+                {currentUser.has_farmer && <span title="Farmer">👨‍🌾</span>}
+                {currentUser.has_customer && <span title="Customer">🛒</span>}
               </div>
             </div>
           </DropdownMenuLabel>

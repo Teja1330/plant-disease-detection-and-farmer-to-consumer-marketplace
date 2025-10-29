@@ -1,3 +1,4 @@
+# users/serializers.py
 from rest_framework import serializers
 from .models import Farmer, Customer
 
@@ -9,7 +10,10 @@ class FarmerSerializer(serializers.ModelSerializer):
             'phone', 'street_address', 'city', 'district', 
             'state', 'country', 'pincode', 'created_at'
         ]
-        extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'id': {'read_only': True}  # ID is auto-generated now
+        }
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -27,7 +31,10 @@ class CustomerSerializer(serializers.ModelSerializer):
             'phone', 'street_address', 'city', 'district', 
             'state', 'country', 'pincode', 'created_at'
         ]
-        extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'id': {'read_only': True}  # ID is auto-generated now
+        }
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)

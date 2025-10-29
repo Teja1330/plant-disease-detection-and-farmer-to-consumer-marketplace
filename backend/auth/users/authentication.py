@@ -1,4 +1,4 @@
-# users/authentication.py - UPDATE with better ID handling
+# users/authentication.py
 import jwt
 from django.conf import settings
 from rest_framework import authentication
@@ -9,7 +9,6 @@ JWT_SECRET = settings.SECRET_KEY
 JWT_ALGORITHM = 'HS256'
 
 
-# users/authentication.py - UPDATE to handle role switching better
 class JWTAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
         auth_header = request.headers.get('Authorization')
@@ -26,57 +25,45 @@ class JWTAuthentication(authentication.BaseAuthentication):
         except jwt.InvalidTokenError:
             raise AuthenticationFailed('Invalid token')
         
-        user_id = payload['id']
+        user_id = payload['id']  # This will be F1, C1, M1, etc.
         user_email = payload['email']
         user_role = payload.get('role', '')
         
         print(f"🔐 Authentication - User ID: {user_id}, Email: {user_email}, Role: {user_role}")
 
-        # Find user based on role - SIMPLIFIED APPROACH
+        # Find user based on prefix
         user = None
         
-        if user_role == 'farmer':
+        if user_id.startswith('F'):
             user = Farmer.objects.filter(id=user_id).first()
             if user:
                 print(f"✅ Authenticated as Farmer: {user.email}")
-        elif user_role == 'customer':
+        elif user_id.startswith('C'):
             user = Customer.objects.filter(id=user_id).first()
             if user:
                 print(f"✅ Authenticated as Customer: {user.email}")
-        elif user_role == 'multi':
+        elif user_id.startswith('M'):
             user = MultiAccount.objects.filter(id=user_id).first()
             if user:
                 print(f"✅ Authenticated as MultiAccount: {user.email}")
         else:
-            # Fallback: Try all tables
-            multi_account = MultiAccount.objects.filter(id=user_id).first()
-            farmer = Farmer.objects.filter(id=user_id).first()
-            customer = Customer.objects.filter(id=user_id).first()
-            
-            if multi_account:
-                user = multi_account
-                print(f"✅ Authenticated as MultiAccount (fallback): {user.email}")
-            elif farmer:
-                user = farmer
-                print(f"✅ Authenticated as Farmer (fallback): {user.email}")
-            elif customer:
-                user = customer
-                print(f"✅ Authenticated as Customer (fallback): {user.email}")
+            # Fallback for any unexpected IDs
+            user = Farmer.objects.filter(id=user_id).first()
+            if not user:
+                user = Customer.objects.filter(id=user_id).first()
+            if not user:
+                user = MultiAccount.objects.filter(id=user_id).first()
 
         if not user:
             print(f"❌ User not found - ID: {user_id}, Email: {user_email}, Role: {user_role}")
             raise AuthenticationFailed('User not found')
         
         # Verify email matches
-        actual_email = getattr(user, 'email', None)
-        if not actual_email and hasattr(user, 'farmer'):
-            actual_email = user.farmer.email
-        
-        if actual_email and actual_email != user_email:
-            print(f"❌ Email mismatch - JWT: {user_email}, User: {actual_email}")
+        if hasattr(user, 'email') and user.email != user_email:
+            print(f"❌ Email mismatch - JWT: {user_email}, User: {user.email}")
             raise AuthenticationFailed('User data mismatch')
         
-        # Add role information to user object
+        # Add role information
         user.role = user_role
         user.has_farmer = payload.get('has_farmer', False)
         user.has_customer = payload.get('has_customer', False)
