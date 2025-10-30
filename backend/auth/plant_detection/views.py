@@ -1,4 +1,4 @@
-# plant_detection/views.py - Add delete functionality
+# plant_detection/views.py - COMPLETE UPDATED VERSION
 import os
 import tempfile
 from rest_framework.views import APIView
@@ -19,9 +19,13 @@ class PlantDetectionView(APIView):
 
     def post(self, request):
         try:
-            print(f"🔍 User ID: {request.user.id}")
-            print(f"🔍 User Email: {request.user.email}")
+            # Get user info with prefix IDs
+            user_id = request.user.id  # This is now F1, C1, M1, etc.
+            user_email = request.user.email
+            user_role = getattr(request.user, 'role', 'unknown')
             
+            print(f"🔍 Plant Detection - User ID: {user_id}, Email: {user_email}, Role: {user_role}")
+
             serializer = PlantDetectionRequestSerializer(data=request.data)
             if not serializer.is_valid():
                 return Response({'detail': 'Invalid data', 'errors': serializer.errors}, status=400)
@@ -54,17 +58,19 @@ class PlantDetectionView(APIView):
                 if 'error' in result:
                     return Response({'detail': result['error']}, status=400)
 
-                # Save the result to database with image as binary data
+                # Save the result to database with prefix user_id
                 detection_result = PlantDetectionResult.objects.create(
-                    user_id=request.user.id,
-                    user_email=request.user.email,
-                    user_type=getattr(request.user, 'role', 'unknown'),
+                    user_id=user_id,  # Now stores F1, C1, M1, etc.
+                    user_email=user_email,
+                    user_type=user_role,
                     image_data=image_data,
                     image_name=image_file.name,
                     image_content_type=image_file.content_type,
                     prediction=result['prediction'],
                     confidence=result['confidence']
                 )
+
+                print(f"✅ Plant detection saved for user {user_id}")
 
                 # Serialize the response
                 response_data = PlantDetectionResultSerializer(detection_result).data
@@ -91,45 +97,72 @@ class PlantDetectionView(APIView):
 class DetectionHistoryView(APIView):
     permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
 
-
-    # plant_detection/views.py - Update DetectionHistoryView
-class DetectionHistoryView(APIView):
-    permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
-
     def get(self, request):
         try:
-            print(f"🔍 Fetching history for user_id: {request.user.id}")
-            print(f"🔍 User email: {request.user.email}")
+            user_id = request.user.id  # F1, C1, M1, etc.
+            user_email = request.user.email
             
-            # Filter by user_id - make sure this is correct
-            history = PlantDetectionResult.objects.filter(user_id=request.user.id).order_by('-created_at')
+            print(f"🔍 Fetching detection history for user_id: {user_id}, email: {user_email}")
             
-            print(f"📊 Found {history.count()} records for user {request.user.id}")
+            # Filter by prefix user_id
+            history = PlantDetectionResult.objects.filter(user_id=user_id).order_by('-created_at')
+            
+            print(f"📊 Found {history.count()} detection records for user {user_id}")
             
             for item in history:
-                print(f"📄 Item {item.id}: user_id={item.user_id}, prediction={item.prediction}")
+                print(f"📄 Detection {item.id}: user_id={item.user_id}, prediction={item.prediction}")
             
             serializer = PlantDetectionResultSerializer(history, many=True)
             return Response(serializer.data)
             
         except Exception as e:
-            print(f"❌ History error: {str(e)}")
+            print(f"❌ History fetch error: {str(e)}")
             return Response({'detail': f'Failed to fetch history: {str(e)}'}, status=400)
 
     def delete(self, request, detection_id=None):
         try:
+            user_id = request.user.id  # F1, C1, M1, etc.
+            
             if detection_id:
-                # Delete specific detection
-                detection = get_object_or_404(PlantDetectionResult, id=detection_id, user_id=request.user.id)
+                # Delete specific detection - filter by prefix user_id
+                detection = get_object_or_404(PlantDetectionResult, id=detection_id, user_id=user_id)
                 detection.delete()
+                print(f"✅ Deleted detection {detection_id} for user {user_id}")
                 return Response({'detail': 'Detection deleted successfully'})
             else:
-                # Delete all user's history
-                PlantDetectionResult.objects.filter(user_id=request.user.id).delete()
-                return Response({'detail': 'All history deleted successfully'})
+                # Delete all user's history - filter by prefix user_id
+                count, _ = PlantDetectionResult.objects.filter(user_id=user_id).delete()
+                print(f"✅ Deleted all {count} detections for user {user_id}")
+                return Response({'detail': f'All {count} detections deleted successfully'})
+                
         except Exception as e:
             print(f"❌ Delete error: {str(e)}")
             return Response({'detail': f'Failed to delete: {str(e)}'}, status=400)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DeleteDetectionView(APIView):
+    permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
+    
+    def delete(self, request, detection_id=None):
+        try:
+            user_id = request.user.id  # F1, C1, M1, etc.
+            
+            if detection_id:
+                # Delete specific detection
+                detection = get_object_or_404(PlantDetectionResult, id=detection_id, user_id=user_id)
+                detection.delete()
+                print(f"✅ Deleted detection {detection_id} for user {user_id}")
+                return Response({'detail': 'Detection deleted successfully'})
+            else:
+                # Delete all detections for user
+                count, _ = PlantDetectionResult.objects.filter(user_id=user_id).delete()
+                print(f"✅ Deleted all {count} detections for user {user_id}")
+                return Response({'detail': f'All {count} detections deleted successfully'})
+                
+        except Exception as e:
+            print(f"❌ Error deleting detection: {str(e)}")
+            return Response({'detail': f'Failed to delete detection: {str(e)}'}, status=400)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -137,12 +170,18 @@ class TestAuthView(APIView):
     permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
     
     def get(self, request):
+        user_id = request.user.id  # F1, C1, M1, etc.
+        user_email = request.user.email
+        user_role = getattr(request.user, 'role', 'No role')
+        
+        print(f"🔐 Test Auth - User ID: {user_id}, Email: {user_email}, Role: {user_role}")
+        
         return Response({
             'message': 'Authentication successful',
-            'user_id': request.user.id,
+            'user_id': user_id,
             'username': getattr(request.user, 'name', 'No name'),
-            'email': request.user.email,
-            'role': getattr(request.user, 'role', 'No role'),
+            'email': user_email,
+            'role': user_role,
             'has_farmer': getattr(request.user, 'has_farmer', False),
             'has_customer': getattr(request.user, 'has_customer', False)
         })

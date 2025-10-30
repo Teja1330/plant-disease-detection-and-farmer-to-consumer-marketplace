@@ -65,50 +65,6 @@ const OrderHistory = () => {
     }
   };
 
-  const handleReorder = (order) => {
-    // Add all items from the order to cart
-    const existingCart = JSON.parse(localStorage.getItem('cart')) || [];
-
-    order.items.forEach(orderItem => {
-      const product = {
-        id: orderItem.product.id,
-        name: orderItem.product.name,
-        price: parseFloat(orderItem.unit_price),
-        unit: orderItem.product.unit,
-        farmer: order.farmer.name,
-        location: order.farmer.pincode || 'Nearby',
-        organic: orderItem.product.organic,
-        image_url: orderItem.product.image_url,
-        description: orderItem.product.description,
-        stock: orderItem.product.stock
-      };
-
-      const existingItem = existingCart.find(item => item.id === product.id);
-
-      if (existingItem) {
-        existingItem.quantity += orderItem.quantity;
-      } else {
-        existingCart.push({
-          ...product,
-          quantity: orderItem.quantity
-        });
-      }
-    });
-
-    localStorage.setItem('cart', JSON.stringify(existingCart));
-
-    console.log("🛒 Reordered items:", {
-      orderId: order.order_id,
-      cartCount: existingCart.length
-    });
-
-    toast({
-      title: "Order Recreated! 🛒",
-      description: `Items from your ${order.order_id} order have been added to cart.`,
-      variant: "success"
-    });
-  };
-
   const handleRateOrder = (order) => {
     toast({
       title: "Thank You! ⭐",
@@ -243,15 +199,7 @@ const OrderHistory = () => {
                   {/* Action Buttons */}
                   <div className="flex items-center justify-between pt-4">
                     <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleReorder(order)}
-                        className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
-                      >
-                        <ShoppingCart className="h-4 w-4 mr-1" />
-                        Reorder
-                      </Button>
+                      
                       {order.status === "completed" && (
                         <Button
                           variant="outline"

@@ -2,8 +2,9 @@
 from django.db import models
 import base64
 
+
 class PlantDetectionResult(models.Model):
-    user_id = models.IntegerField()
+    user_id = models.CharField(max_length=10)  # Now supports F1, C1, M1
     user_email = models.EmailField()
     user_type = models.CharField(max_length=20)
     

@@ -192,6 +192,7 @@ const ProfileDropdown = () => {
     }
   };
 
+  // In the handleAddressUpdateSuccess function, replace it with:
   const handleAddressUpdateSuccess = async (newAddress) => {
     try {
       console.log("🔄 Refreshing user data after address update...");
@@ -205,9 +206,10 @@ const ProfileDropdown = () => {
       setUser(updatedUser);
       localStorage.setItem('user_data', JSON.stringify(updatedUser));
 
-      // Refresh from server
-      await refreshUserData();
+      // Close the modal first
+      setShowAddressForm(false);
 
+      // Then show success message
       toast({
         title: "Address Updated! ✅",
         description: "Your address has been saved successfully.",
@@ -218,6 +220,8 @@ const ProfileDropdown = () => {
 
     } catch (error) {
       console.error("❌ Error in address update success handler:", error);
+      // Still close the modal even if there's an error
+      setShowAddressForm(false);
       toast({
         title: "Address Updated",
         description: "Your address has been saved.",

@@ -287,6 +287,7 @@ class LoginView(APIView):
 
 
 # In users/views.py - UPDATE UserView to handle MultiAccount switching
+# In users/views.py - FIXED UserView
 @method_decorator(csrf_exempt, name='dispatch')
 class UserView(APIView):
     def get(self, request):
@@ -310,30 +311,30 @@ class UserView(APIView):
         
         print(f"🔍 UserView - Looking for user ID: {user_id}, Email: {user_email}, Role: {user_role}")
         
-        # NEW: Handle MultiAccount users with role switching
-        if user_role == 'multi':
+        # Handle all user types properly
+        if user_id.startswith('M'):
+            # MultiAccount user
             user_instance = MultiAccount.objects.filter(id=user_id).first()
             if user_instance:
-                # For multi role, we can return either farmer or customer data
-                # Let's return farmer data as default
-                user_instance = user_instance.farmer
-                print(f"✅ UserView - MultiAccount user, using farmer data: {user_instance.email}")
-        elif user_role == 'farmer':
+                # For multi role, use the appropriate account based on current role
+                if user_role == 'farmer':
+                    user_instance = user_instance.farmer
+                elif user_role == 'customer':
+                    user_instance = user_instance.customer
+                else:
+                    # Default to farmer if role is 'multi'
+                    user_instance = user_instance.farmer
+                print(f"✅ UserView - MultiAccount user, using {user_role} data: {user_instance.email}")
+        elif user_id.startswith('F'):
+            # Farmer user
             user_instance = Farmer.objects.filter(id=user_id).first()
-            if not user_instance:
-                # Check if it's a MultiAccount user
-                multi_user = MultiAccount.objects.filter(id=user_id).first()
-                if multi_user:
-                    user_instance = multi_user.farmer
-                    print(f"✅ UserView - MultiAccount user as farmer: {user_instance.email}")
-        elif user_role == 'customer':
+            if user_instance:
+                print(f"✅ UserView - Farmer user: {user_instance.email}")
+        elif user_id.startswith('C'):
+            # Customer user  
             user_instance = Customer.objects.filter(id=user_id).first()
-            if not user_instance:
-                # Check if it's a MultiAccount user
-                multi_user = MultiAccount.objects.filter(id=user_id).first()
-                if multi_user:
-                    user_instance = multi_user.customer
-                    print(f"✅ UserView - MultiAccount user as customer: {user_instance.email}")
+            if user_instance:
+                print(f"✅ UserView - Customer user: {user_instance.email}")
 
         if not user_instance:
             print(f"❌ UserView - User not found with ID: {user_id}")
@@ -364,6 +365,7 @@ class UserView(APIView):
 
 
 # In users/views.py - UPDATE SwitchAccountView
+# In users/views.py - FIXED SwitchAccountView
 @method_decorator(csrf_exempt, name='dispatch')
 class SwitchAccountView(APIView):
     def post(self, request):
@@ -393,6 +395,7 @@ class SwitchAccountView(APIView):
         has_farmer = False
         has_customer = False
         new_user_id = user_id  # Default to same ID
+        new_user_instance = None
         
         # Check MultiAccount
         multi_account = MultiAccount.objects.filter(id=user_id).first()
@@ -402,8 +405,10 @@ class SwitchAccountView(APIView):
             # For MultiAccount users, we need to get the actual Farmer/Customer ID
             if target_role == 'farmer':
                 new_user_id = multi_account.farmer.id  # This will be F1, F2, etc.
+                new_user_instance = multi_account.farmer
             else:  # customer
                 new_user_id = multi_account.customer.id  # This will be C1, C2, etc.
+                new_user_instance = multi_account.customer
             print(f"✅ User is MultiAccount - switching to {target_role} with ID: {new_user_id}")
         else:
             # Check individual tables
@@ -413,10 +418,12 @@ class SwitchAccountView(APIView):
             if farmer:
                 has_farmer = True
                 has_customer = Customer.objects.filter(email=user_email).exists()
+                new_user_instance = farmer
                 print(f"✅ User is Farmer - has_farmer: {has_farmer}, has_customer: {has_customer}")
             elif customer:
                 has_farmer = Farmer.objects.filter(email=user_email).exists()
                 has_customer = True
+                new_user_instance = customer
                 print(f"✅ User is Customer - has_farmer: {has_farmer}, has_customer: {has_customer}")
 
         # Check permissions
@@ -436,8 +443,8 @@ class SwitchAccountView(APIView):
             'role': target_role,
             'has_farmer': has_farmer,
             'has_customer': has_customer,
-            'exp': payload['exp'],
-            'iat': payload['iat']
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24),  # NEW EXPIRATION
+            'iat': datetime.datetime.utcnow(),
         }
         
         new_token = jwt.encode(new_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -447,7 +454,8 @@ class SwitchAccountView(APIView):
             'token': new_token,
             'role': target_role,
             'has_farmer': has_farmer,
-            'has_customer': has_customer
+            'has_customer': has_customer,
+            'user_id': new_user_id  # ADD THIS to help frontend debugging
         })
 
 

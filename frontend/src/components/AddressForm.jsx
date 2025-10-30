@@ -9,9 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Loader2, X, CheckCircle } from "lucide-react";
 import { addressAPI } from "../api";
+import { useUser } from "../App"; // ADD THIS IMPORT
+
 
 const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) => {
   const { toast } = useToast();
+  const { setUser } = useUser(); // ADD THIS LINE
   const [loading, setLoading] = useState(false);
   const [districts, setDistricts] = useState([]);
   const [formData, setFormData] = useState({
@@ -160,11 +163,6 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
         console.error("❌ Failed to refresh user data:", refreshError);
       }
 
-      toast({
-        title: "Address Updated!",
-        description: "Your address has been updated successfully.",
-        variant: "success"
-      });
 
       if (onSuccess) {
         onSuccess(response.data.address);

@@ -5,67 +5,61 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Search, ShoppingCart, Star, MapPin, Clock, Leaf } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { handleScroll } from "@/components/Navbar";
+import { customerAPI } from "@/api";
 
 const CustomerHome = () => {
-  useEffect(() => {
-        handleScroll();
-      }, []);
   const { toast } = useToast();
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "Organic Tomatoes",
-      farmer: "Green Valley Farm",
-      price: 4.99,
-      unit: "lb",
-      rating: 4.8,
-      image: "/placeholder.svg",
-      location: "15 miles away",
-      harvestDate: "2 days ago"
-    },
-    {
-      id: 2,
-      name: "Fresh Spinach",
-      farmer: "Sunny Acres",
-      price: 3.50,
-      unit: "bunch",
-      rating: 4.9,
-      image: "/placeholder.svg",
-      location: "8 miles away",
-      harvestDate: "1 day ago"
-    },
-    {
-      id: 3,
-      name: "Sweet Corn",
-      farmer: "Prairie Fields",
-      price: 6.00,
-      unit: "dozen",
-      rating: 4.7,
-      image: "/placeholder.svg",
-      location: "12 miles away",
-      harvestDate: "Today"
-    },
-    {
-      id: 4,
-      name: "Baby Carrots",
-      farmer: "Earth Garden",
-      price: 2.99,
-      unit: "lb",
-      rating: 4.6,
-      image: "/placeholder.svg",
-      location: "20 miles away",
-      harvestDate: "1 day ago"
+  useEffect(() => {
+    handleScroll();
+    loadFeaturedProducts();
+  }, []);
+
+  const loadFeaturedProducts = async () => {
+    try {
+      setLoading(true);
+      console.log("🔄 Loading featured products...");
+      const response = await customerAPI.getMarketplaceProducts();
+      const allProducts = response.data.products || [];
+      
+      // Get only first 3 products that match customer's district
+      const customerDistrict = response.data.customer_district;
+      let filteredProducts = allProducts;
+      
+      if (customerDistrict) {
+        filteredProducts = allProducts.filter(product => 
+          product.farmer_district === customerDistrict
+        );
+      }
+      
+      // Take only first 3 products
+      const featured = filteredProducts.slice(0, 3);
+      setFeaturedProducts(featured);
+      
+      console.log("✅ Featured products loaded:", {
+        total: allProducts.length,
+        filtered: filteredProducts.length,
+        featured: featured.length,
+        customerDistrict: customerDistrict
+      });
+      
+    } catch (error) {
+      console.error("Failed to load featured products:", error);
+      // If API fails, show empty state
+      setFeaturedProducts([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   // Safe cart count function
   const getCartCount = () => {
     try {
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      // Ensure cart is an array and count items
       return Array.isArray(cart) ? cart.length : 0;
     } catch (error) {
       console.error('Error reading cart from localStorage:', error);
@@ -75,27 +69,20 @@ const CustomerHome = () => {
 
   const handleAddToCart = (product) => {
     try {
-      // Get existing cart from localStorage
       const existingCart = JSON.parse(localStorage.getItem('cart')) || [];
-      
-      // Ensure existingCart is an array
       const cart = Array.isArray(existingCart) ? existingCart : [];
       
-      // Check if product already exists in cart
       const existingItem = cart.find(item => item.id === product.id);
       
       if (existingItem) {
-        // Update quantity if item exists
         existingItem.quantity += 1;
       } else {
-        // Add new item to cart
         cart.push({
           ...product,
           quantity: 1
         });
       }
       
-      // Save updated cart to localStorage
       localStorage.setItem('cart', JSON.stringify(cart));
       
       console.log("🛒 Added to cart:", {
@@ -121,7 +108,7 @@ const CustomerHome = () => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`h-4 w-4 ${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+        className={`h-4 w-4 ${i < Math.floor(rating || 4.5) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
       />
     ));
   };
@@ -247,58 +234,89 @@ const CustomerHome = () => {
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProducts.map((product) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-              >
-              <Card className="hover:shadow-lg transition-all duration-300 bg-white border border-gray-200">
-                <CardContent className="p-0">
-                  <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center">
-                    <Leaf className="h-12 w-12 text-green-300" />
-                  </div>
-                  <div className="p-4 space-y-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{product.name}</h3>
-                      <p className="text-sm text-gray-600">{product.farmer}</p>
-                    </div>
-                    
-                    <div className="flex items-center space-x-1">
-                      {renderStars(product.rating)}
-                      <span className="text-sm font-medium">{product.rating}</span>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <div className="flex items-center text-xs text-gray-500">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {product.location}
+          {loading ? (
+            <div className="text-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+              <p className="mt-4 text-lg text-gray-600">Loading featured products...</p>
+            </div>
+          ) : featuredProducts.length === 0 ? (
+            <div className="text-center py-16">
+              <Leaf className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No featured products</h3>
+              <p className="text-gray-600 mb-6">Check back later for fresh products from local farmers</p>
+              <Link to="/customer/marketplace">
+                <Button className="bg-green-600 hover:bg-green-700">
+                  Browse All Products
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredProducts.map((product) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <Card className="hover:shadow-lg transition-all duration-300 bg-white border border-gray-200">
+                    <CardContent className="p-0">
+                      <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center relative">
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-full h-full object-cover rounded-t-lg"
+                          />
+                        ) : (
+                          <Leaf className="h-12 w-12 text-green-300" />
+                        )}
+                        {product.organic && (
+                          <div className="absolute top-2 left-2 w-3 h-3 bg-green-500 rounded-full" />
+                        )}
                       </div>
-                      <div className="flex items-center text-xs text-gray-500">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Harvested {product.harvestDate}
+                      <div className="p-4 space-y-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                          <p className="text-sm text-gray-600">{product.farmer_name}</p>
+                        </div>
+                        
+                        <div className="flex items-center space-x-1">
+                          {renderStars(product.rating)}
+                          <span className="text-sm font-medium">{product.rating || 4.5}</span>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center text-xs text-gray-500">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {product.farmer_district ? `${product.farmer_city}, ${product.farmer_district}` : 'Location not available'}
+                          </div>
+                          <div className="flex items-center text-xs text-gray-500">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Harvested {new Date(product.harvest_date).toLocaleDateString()}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-green-600">
+                            ${parseFloat(product.price).toFixed(2)}/{product.unit}
+                          </span>
+                          <Button 
+                            size="sm" 
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => handleAddToCart(product)}
+                          >
+                            <ShoppingCart className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-green-600">${product.price.toFixed(2)}/{product.unit}</span>
-                      <Button 
-                        size="sm" 
-                        className="bg-green-600 hover:bg-green-700"
-                        onClick={() => handleAddToCart(product)}
-                      >
-                        <ShoppingCart className="h-4 w-4 mr-1" />
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              </motion.div>
-            ))}
-          </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

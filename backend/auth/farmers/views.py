@@ -266,6 +266,7 @@ class OrderListView(APIView):
             return Response({'detail': f'Failed to fetch orders: {str(e)}'}, status=400)
 
 
+# In farmers/views.py - FIXED OrderDetailView
 @method_decorator(csrf_exempt, name='dispatch')
 class OrderDetailView(APIView):
     permission_classes = [IsAuthenticatedWithJWT, IsFarmerOrMultiAccount]
@@ -285,18 +286,22 @@ class OrderDetailView(APIView):
             order = get_object_or_404(Order, id=order_id, farmer_id=farmer_instance.id)
             
             new_status = request.data.get('status')
-            valid_statuses = ['pending', 'confirmed', 'shipped', 'completed', 'cancelled']
+            valid_statuses = ['pending', 'processing', 'completed', 'cancelled']
             
             if new_status not in valid_statuses:
                 return Response({'detail': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}, status=400)
             
+            # Update order status
             order.status = new_status
             order.save()
             
             serializer = OrderSerializer(order)
             
             print(f"✅ Order {order_id} status updated to: {new_status}")
-            return Response(serializer.data)
+            return Response({
+                'message': f'Order status updated to {new_status}',
+                'order': serializer.data
+            })
         except Exception as e:
             print(f"❌ Error updating order: {str(e)}")
             return Response({'detail': f'Failed to update order: {str(e)}'}, status=400)
