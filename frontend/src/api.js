@@ -179,17 +179,21 @@ export const authAPI = {
   }
 };
 
+
 export const addressAPI = {
-  updateAddress: (addressData) => {
-    return API.patch('/update-address/', addressData);
+  getCurrentAddress: async () => {
+    const response = await api.get('/users/me/');
+    return response;
   },
 
-  getDistricts: () => {
-    return API.get('/districts/');
+  updateAddress: async (addressData) => {
+    const response = await api.patch('/users/update-address/', addressData);
+    return response;
   },
 
-  getCurrentAddress: () => {
-    return API.get('/user');
+  getAvailableDistricts: async () => {
+    const response = await api.get('/users/available-districts/');
+    return response;
   }
 };
 

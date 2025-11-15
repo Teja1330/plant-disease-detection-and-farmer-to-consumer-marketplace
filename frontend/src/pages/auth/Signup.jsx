@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import API from "../../api";
 import { handleScroll } from "@/components/Navbar";
 import { useUser } from "../../App";
+import { states, getDistrictsByState } from "@/lib/statesDistricts"; // ADD THIS IMPORT
 
 const Signup = () => {
   const { setUser } = useUser();
@@ -40,6 +41,7 @@ const Signup = () => {
     number: false,
     special: false,
   });
+  const [districts, setDistricts] = useState([]); // ADD THIS STATE
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -47,6 +49,21 @@ const Signup = () => {
     handleScroll();
     localStorage.removeItem('auth_token');
   }, []);
+
+  // Update districts when state changes - ADD THIS EFFECT
+  useEffect(() => {
+    if (formData.state) {
+      const stateDistricts = getDistrictsByState(formData.state);
+      setDistricts(stateDistricts);
+
+      // Reset district if it's not in the new state's districts
+      if (formData.district && !stateDistricts.includes(formData.district)) {
+        setFormData(prev => ({ ...prev, district: "" }));
+      }
+    } else {
+      setDistricts([]);
+    }
+  }, [formData.state]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -102,8 +119,19 @@ const Signup = () => {
       return false;
     }
 
-    // For farmers, address is optional at signup
-    // For customers, no address at signup
+    // For farmers, if address form is shown, validate address fields
+    if (selectedRole === "farmer" && showAddressForm) {
+      if (!formData.street_address.trim() || !formData.city.trim() ||
+        !formData.district.trim() || !formData.state.trim() || !formData.pincode.trim()) {
+        toast({
+          title: "Incomplete Address",
+          description: "Please fill all address fields or hide the address section.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -133,8 +161,8 @@ const Signup = () => {
         phone: formData.phone.trim(),
       };
 
-      // Only include address for farmers if they filled it
-      if (selectedRole === "farmer" && formData.street_address.trim()) {
+      // Only include address for farmers if they filled the address form
+      if (selectedRole === "farmer" && showAddressForm && formData.street_address.trim()) {
         registrationData.street_address = formData.street_address.trim();
         registrationData.city = formData.city.trim();
         registrationData.district = formData.district.trim();
@@ -225,6 +253,22 @@ const Signup = () => {
       <span className={met ? "text-green-600" : "text-red-600"}>{text}</span>
     </div>
   );
+
+  // Reset address form when role changes - ADD THIS EFFECT
+  useEffect(() => {
+    if (selectedRole === "customer") {
+      setShowAddressForm(false);
+      // Reset address fields for customers
+      setFormData(prev => ({
+        ...prev,
+        street_address: "",
+        city: "",
+        district: "",
+        state: "",
+        pincode: ""
+      }));
+    }
+  }, [selectedRole]);
 
   if (!selectedRole) {
     return (
@@ -421,7 +465,7 @@ const Signup = () => {
                 />
               </motion.div>
 
-              {/* Address Section - Only for Farmers */}
+              {/* Address Section - Only for Farmers (Updated with dropdowns) */}
               {selectedRole === "farmer" && (
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -453,7 +497,7 @@ const Signup = () => {
                       </p>
 
                       <div className="space-y-2">
-                        <Label htmlFor="street_address" className="text-sm font-medium">Street Address</Label>
+                        <Label htmlFor="street_address" className="text-sm font-medium">Street Address *</Label>
                         <Textarea
                           id="street_address"
                           name="street_address"
@@ -462,12 +506,13 @@ const Signup = () => {
                           placeholder="Enter your farm street address"
                           disabled={isLoading}
                           className="bg-background/50 border-border/70 focus:border-primary"
+                          required
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="city" className="text-sm font-medium">City</Label>
+                          <Label htmlFor="city" className="text-sm font-medium">City *</Label>
                           <Input
                             id="city"
                             name="city"
@@ -476,39 +521,12 @@ const Signup = () => {
                             placeholder="City"
                             disabled={isLoading}
                             className="bg-background/50 border-border/70 focus:border-primary"
+                            required
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="district" className="text-sm font-medium">District</Label>
-                          <Input
-                            id="district"
-                            name="district"
-                            value={formData.district}
-                            onChange={handleInputChange}
-                            placeholder="District"
-                            disabled={isLoading}
-                            className="bg-background/50 border-border/70 focus:border-primary"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="state" className="text-sm font-medium">State</Label>
-                          <Input
-                            id="state"
-                            name="state"
-                            value={formData.state}
-                            onChange={handleInputChange}
-                            placeholder="State"
-                            disabled={isLoading}
-                            className="bg-background/50 border-border/70 focus:border-primary"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="pincode" className="text-sm font-medium">Pincode</Label>
+                          <Label htmlFor="pincode" className="text-sm font-medium">Pincode *</Label>
                           <Input
                             id="pincode"
                             name="pincode"
@@ -517,8 +535,52 @@ const Signup = () => {
                             placeholder="Pincode"
                             disabled={isLoading}
                             className="bg-background/50 border-border/70 focus:border-primary"
+                            required
                           />
                         </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="state" className="text-sm font-medium">State *</Label>
+                        <select
+                          id="state"
+                          name="state"
+                          value={formData.state}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          disabled={isLoading}
+                          required
+                        >
+                          <option value="">Select State</option>
+                          {states.map((state) => (
+                            <option key={state} value={state}>
+                              {state}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="district" className="text-sm font-medium">District *</Label>
+                        <select
+                          id="district"
+                          name="district"
+                          value={formData.district}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          disabled={!formData.state || isLoading}
+                          required
+                        >
+                          <option value="">{formData.state ? "Select District" : "Select State First"}</option>
+                          {districts.map((district) => (
+                            <option key={district} value={district}>
+                              {district}
+                            </option>
+                          ))}
+                        </select>
+                        {!formData.state && (
+                          <p className="text-xs text-gray-500">Please select a state first</p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -535,6 +597,26 @@ const Signup = () => {
                       </div>
                     </div>
                   )}
+                </motion.div>
+              )}
+
+              {/* Note for Customers - No address during signup */}
+              {selectedRole === "customer" && (
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.35 }}
+                  className="bg-blue-50 border border-blue-200 rounded-lg p-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <Label className="text-sm font-medium text-blue-800">Delivery Address</Label>
+                      <p className="text-xs text-blue-600 mt-1">
+                        You can add your delivery address later from your profile settings.
+                      </p>
+                    </div>
+                  </div>
                 </motion.div>
               )}
 

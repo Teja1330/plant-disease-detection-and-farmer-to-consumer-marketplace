@@ -139,7 +139,7 @@ const Footer = () => {
           className="border-t border-white/20 mt-6 pt-6 text-center text-white/60 text-sm"
         >
           <p>
-            &copy; 2024 AgriCare. All rights reserved. Built by GMRIT Final Year
+            &copy; 2025 AgriCare. All rights reserved. Built by GMRIT Final Year
             B.Tech CSE (AI & DS) Team.
           </p>
         </motion.div>

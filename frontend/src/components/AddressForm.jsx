@@ -1,4 +1,4 @@
-// components/AddressForm.jsx - UPDATED FOR PREFIX IDS
+// components/AddressForm.jsx - UPDATED WITH STATE-DISTRICT DROPDOWNS
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -9,14 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Loader2, X, CheckCircle } from "lucide-react";
 import { addressAPI } from "../api";
-import { useUser } from "../App"; // ADD THIS IMPORT
-
+import { useUser } from "../App";
+import { statesAndDistricts, states, getDistrictsByState } from "@/lib/statesDistricts";
 
 const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) => {
   const { toast } = useToast();
-  const { setUser } = useUser(); // ADD THIS LINE
+  const { setUser } = useUser();
   const [loading, setLoading] = useState(false);
-  const [districts, setDistricts] = useState([]);
   const [formData, setFormData] = useState({
     street_address: "",
     city: "",
@@ -26,56 +25,48 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
     pincode: ""
   });
   const [hasExistingAddress, setHasExistingAddress] = useState(false);
+  const [districts, setDistricts] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
-      loadDistricts();
       loadExistingAddress();
-
-      // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
     } else {
-      // Re-enable body scroll when modal is closed
       document.body.style.overflow = 'unset';
     }
 
-    // Cleanup function
     return () => {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen, user]);
 
-  const loadDistricts = async () => {
-    try {
-      console.log("🔄 Loading districts...");
-      const response = await addressAPI.getDistricts();
-      console.log("✅ Districts loaded:", response.data);
-      setDistricts(response.data.districts || []);
-    } catch (error) {
-      console.error("❌ Failed to load districts:", error);
+  // Update districts when state changes
+  useEffect(() => {
+    if (formData.state) {
+      const stateDistricts = getDistrictsByState(formData.state);
+      setDistricts(stateDistricts);
+
+      // Reset district if it's not in the new state's districts
+      if (formData.district && !stateDistricts.includes(formData.district)) {
+        setFormData(prev => ({ ...prev, district: "" }));
+      }
+    } else {
+      setDistricts([]);
     }
-  };
+  }, [formData.state]);
 
   const loadExistingAddress = async () => {
     try {
       console.log("🔄 Loading existing address for user:", {
-        id: user?.id, // Prefix ID
+        id: user?.id,
         role: role
       });
-      
+
       const response = await addressAPI.getCurrentAddress();
       const userData = response.data;
 
-      console.log("📦 User data from API:", {
-        id: userData.id, // Prefix ID
-        street: userData.street_address,
-        city: userData.city,
-        district: userData.district,
-        state: userData.state,
-        pincode: userData.pincode
-      });
+      console.log("📦 User data from API:", userData);
 
-      // Check if user has complete address (handle empty strings)
       const hasAddress = userData.street_address && userData.street_address.trim() !== '' &&
         userData.city && userData.city.trim() !== '' &&
         userData.district && userData.district.trim() !== '' &&
@@ -85,7 +76,7 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
       console.log("✅ Has complete address:", hasAddress);
       setHasExistingAddress(hasAddress);
 
-      // Always pre-fill form with whatever data exists (even empty strings)
+      // Pre-fill form with existing data
       setFormData({
         street_address: userData.street_address || "",
         city: userData.city || "",
@@ -95,15 +86,14 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
         pincode: userData.pincode || ""
       });
 
-      if (hasAddress) {
-        console.log("✅ Form pre-filled with existing complete address");
-      } else {
-        console.log("⚠️ Form pre-filled with incomplete/empty address data");
+      // Set districts based on state
+      if (userData.state) {
+        const stateDistricts = getDistrictsByState(userData.state);
+        setDistricts(stateDistricts);
       }
 
     } catch (error) {
       console.error("❌ Failed to load existing address:", error);
-      // If API fails, use user props
       if (user) {
         setFormData({
           street_address: user.street_address || "",
@@ -113,7 +103,11 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
           country: user.country || "India",
           pincode: user.pincode || ""
         });
-        console.log("⚠️ Using user props due to API error");
+
+        if (user.state) {
+          const stateDistricts = getDistrictsByState(user.state);
+          setDistricts(stateDistricts);
+        }
       }
     }
   };
@@ -140,7 +134,7 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
     try {
       setLoading(true);
       console.log("🔄 Updating address for user:", {
-        id: user?.id, // Prefix ID
+        id: user?.id,
         role: role,
         addressData: formData
       });
@@ -153,16 +147,12 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
       try {
         const userResponse = await addressAPI.getCurrentAddress();
         const updatedUserData = userResponse.data;
-
-        // Update user context
         setUser(updatedUserData);
         localStorage.setItem('user_data', JSON.stringify(updatedUserData));
-
         console.log("✅ User data refreshed after address update - ID:", updatedUserData.id);
       } catch (refreshError) {
         console.error("❌ Failed to refresh user data:", refreshError);
       }
-
 
       if (onSuccess) {
         onSuccess(response.data.address);
@@ -171,7 +161,6 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
       onClose();
     } catch (error) {
       console.error("❌ Failed to update address:", error);
-
       console.error("Error details:", error.response?.data);
 
       let errorMessage = "Failed to update address. Please try again.";
@@ -191,7 +180,6 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
     }
   };
 
-  // Close modal when clicking outside or pressing Escape
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -204,7 +192,6 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
     }
   };
 
-  // Add event listener for Escape key
   useEffect(() => {
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
@@ -229,7 +216,6 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
         className="w-full max-w-md mx-auto my-auto"
       >
         <Card className="shadow-2xl border-0 relative bg-white max-h-[85vh] flex flex-col">
-          {/* Close Button */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10 bg-white rounded-full p-1 shadow-sm"
@@ -278,47 +264,6 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="district" className="text-sm font-medium">District *</Label>
-                    {role === "customer" ? (
-                      <select
-                        id="district"
-                        value={formData.district}
-                        onChange={(e) => handleInputChange('district', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                        required
-                      >
-                        <option value="">Select District</option>
-                        {districts.map((district) => (
-                          <option key={district} value={district}>
-                            {district}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <Input
-                        id="district"
-                        value={formData.district}
-                        onChange={(e) => handleInputChange('district', e.target.value)}
-                        placeholder="District"
-                        required
-                      />
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="state" className="text-sm font-medium">State *</Label>
-                    <Input
-                      id="state"
-                      value={formData.state}
-                      onChange={(e) => handleInputChange('state', e.target.value)}
-                      placeholder="State"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="pincode" className="text-sm font-medium">Pincode *</Label>
                     <Input
                       id="pincode"
@@ -331,12 +276,53 @@ const AddressForm = ({ isOpen, onClose, onSuccess, user, role = "customer" }) =>
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="state" className="text-sm font-medium">State *</Label>
+                  <select
+                    id="state"
+                    value={formData.state}
+                    onChange={(e) => handleInputChange('state', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    required
+                  >
+                    <option value="">Select State</option>
+                    {states.map((state) => (
+                      <option key={state} value={state}>
+                        {state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="district" className="text-sm font-medium">District *</Label>
+                  <select
+                    id="district"
+                    value={formData.district}
+                    onChange={(e) => handleInputChange('district', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    required
+                    disabled={!formData.state}
+                  >
+                    <option value="">{formData.state ? "Select District" : "Select State First"}</option>
+                    {districts.map((district) => (
+                      <option key={district} value={district}>
+                        {district}
+                      </option>
+                    ))}
+                  </select>
+                  {!formData.state && (
+                    <p className="text-xs text-gray-500">Please select a state first</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="country" className="text-sm font-medium">Country</Label>
                   <Input
                     id="country"
                     value={formData.country}
                     onChange={(e) => handleInputChange('country', e.target.value)}
                     placeholder="Country"
+                    disabled
                   />
                 </div>
               </div>

@@ -492,6 +492,7 @@ class AvailableDistrictsView(APIView):
 
 
 # users/views.py - Add this if missing
+# In users/views.py - UPDATE UpdateAddressView with state-district validation
 @method_decorator(csrf_exempt, name='dispatch')
 class UpdateAddressView(APIView):
     def patch(self, request):
@@ -510,6 +511,13 @@ class UpdateAddressView(APIView):
             # Validate required fields
             if not all([street_address, city, district, state, pincode]):
                 return Response({'detail': 'All address fields are required.'}, status=400)
+
+            # Validate state and district
+            valid_states = ["Andhra Pradesh", "Telangana", "Tamil Nadu", "Kerala", "Karnataka"]
+            if state not in valid_states:
+                return Response({
+                    'detail': f'Invalid state. Must be one of: {", ".join(valid_states)}'
+                }, status=400)
 
             # Find user and update address
             user_instance = None
