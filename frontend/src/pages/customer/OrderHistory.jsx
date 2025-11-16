@@ -175,14 +175,14 @@ const OrderHistory = () => {
                         </span>
                       </div>
                       <span className="font-semibold text-gray-900">
-                        ${(item.unit_price * item.quantity).toFixed(2)}
+                        ₹{(item.unit_price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   ))}
 
                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                     <span className="text-lg font-bold text-gray-900">
-                      Total: ${parseFloat(order.total_amount).toFixed(2)}
+                      Total: ₹{parseFloat(order.total_amount).toFixed(2)}
                     </span>
                     {order.status === "completed" && (
                       <div className="flex items-center space-x-1">

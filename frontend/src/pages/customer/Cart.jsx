@@ -23,7 +23,6 @@ import { handleScroll } from "@/components/Navbar";
 import { customerAPI } from "@/api";
 import { useUser } from "../../App";
 import AddressForm from "@/components/AddressForm";
-import { hasCompleteAddress, hasNoAddress } from "@/lib/address";
 
 const Cart = () => {
   const { toast } = useToast();
@@ -31,8 +30,8 @@ const Cart = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useUser();
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const hasAddress = hasCompleteAddress(user);
-  const noAddress = hasNoAddress(user);
+  const hasAddress = user?.hasCompleteAddress;
+  const noAddress = user?.hasNoAddress;
 
   console.log("🛒 Cart - User address status:", {
     id: user?.id, // Prefix ID
@@ -117,8 +116,8 @@ const Cart = () => {
     return sum + (price * item.quantity);
   }, 0);
 
-  const deliveryFee = subtotal > 50 ? 0 : 4.99;
-  const tax = subtotal * 0.08;
+  const deliveryFee = subtotal > 100 ? 0 : (subtotal > 1000 ? 20 : 30); // Free for orders > 100, else Rs. 20 for > 1000, Rs. 30 otherwise
+  const tax = Math.min(subtotal * 0.05, 9); // 5% tax capped at Rs. 9 (< Rs. 10)
   const total = subtotal + deliveryFee + tax;
 
   const handleCheckout = async () => {
@@ -242,7 +241,7 @@ const Cart = () => {
                       <CardContent className="p-6">
                         <div className="flex items-center space-x-4">
                           {/* Product Image */}
-                          <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 relative">
+                          <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 relative">
                             {item.image_url ? (
                               <img
                                 src={item.image_url}
@@ -250,7 +249,7 @@ const Cart = () => {
                                 className="w-full h-full object-cover rounded-lg"
                               />
                             ) : (
-                              <Leaf className="h-8 w-8 text-green-300" />
+                              <Leaf className="h-6 w-6 text-green-300" />
                             )}
                             {item.organic && (
                               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full" />
@@ -277,7 +276,7 @@ const Cart = () => {
 
                             <div className="flex items-center justify-between">
                               <span className="text-lg font-bold text-green-600">
-                                ${getPrice(item).toFixed(2)}/{item.unit}
+                                ₹{getPrice(item).toFixed(2)}/{item.unit}
                               </span>
 
                               {/* Quantity Controls */}
@@ -321,7 +320,7 @@ const Cart = () => {
 
                             <div className="text-right">
                               <span className="text-lg font-bold text-gray-900">
-                                ${(getPrice(item) * item.quantity).toFixed(2)}
+                                ₹{(getPrice(item) * item.quantity).toFixed(2)}
                               </span>
                             </div>
                           </div>
@@ -373,31 +372,31 @@ const Cart = () => {
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Subtotal</span>
-                      <span className="font-medium">${subtotal.toFixed(2)}</span>
+                      <span className="font-medium">₹{subtotal.toFixed(2)}</span>
                     </div>
 
                     <div className="flex justify-between">
                       <span className="text-gray-600">
                         Delivery Fee
-                        {subtotal > 50 && (
-                          <span className="text-xs text-green-600 ml-1">(Free over $50)</span>
+                        {subtotal > 100 && (
+                          <span className="text-xs text-green-600 ml-1">(FREE over ₹100)</span>
                         )}
                       </span>
                       <span className="font-medium">
-                        {deliveryFee === 0 ? 'FREE' : `$${deliveryFee.toFixed(2)}`}
+                        {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee.toFixed(2)}`}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
                       <span className="text-gray-600">Tax</span>
-                      <span className="font-medium">${tax.toFixed(2)}</span>
+                      <span className="font-medium">₹{tax.toFixed(2)}</span>
                     </div>
 
                     <Separator />
 
                     <div className="flex justify-between text-lg font-bold">
                       <span className="text-gray-900">Total</span>
-                      <span className="text-green-600">${total.toFixed(2)}</span>
+                      <span className="text-green-600">₹{total.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -436,7 +435,7 @@ const Cart = () => {
                       <Leaf className="h-3 w-3 mr-1 text-green-500" />
                       Supporting {new Set(cartItems.map(item => item.farmer)).size} local farmers
                     </p>
-                    <p>Free delivery on orders over $50</p>
+                    <p>Free delivery on orders over ₹3000</p>
                     <p>Fresh delivery within 5 hours</p>
                   </div>
                 </CardContent>

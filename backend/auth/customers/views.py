@@ -213,7 +213,7 @@ class CreateOrderView(APIView):
             
             Order ID: {order.order_id}
             Customer: {order.customer_name}
-            Total Amount: ${order.total_amount}
+            Total Amount: ₹{order.total_amount}
             Delivery Address: {order.address}
             
             Please check your farmer dashboard for more details.

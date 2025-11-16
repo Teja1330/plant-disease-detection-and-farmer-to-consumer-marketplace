@@ -109,6 +109,9 @@ const AppContent = () => {
         state: null,
         country: null,
         pincode: null,
+        // Derived address flags
+        hasCompleteAddress: false,
+        hasNoAddress: true,
         phone: null
       });
 
@@ -118,6 +121,20 @@ const AppContent = () => {
 
   // Fetch user on page load - UPDATED FOR PREFIX IDS
   useEffect(() => {
+    // Helper to compute derived address flags once and attach to user object
+    const computeAddressFlags = (u) => {
+      const street = u?.street_address || '';
+      const city = u?.city || '';
+      const district = u?.district || '';
+      const state = u?.state || '';
+      const pincode = u?.pincode || '';
+
+      const hasCompleteAddress = !!(street && street.trim() !== '' && city && city.trim() !== '' && district && district.trim() !== '' && state && state.trim() !== '' && pincode && pincode.trim() !== '');
+      const hasNoAddress = !street && !city && !district && !state && !pincode;
+
+      return { hasCompleteAddress, hasNoAddress };
+    };
+
     const fetchUser = async () => {
       try {
         const token = localStorage.getItem('auth_token');
@@ -132,11 +149,14 @@ const AppContent = () => {
         if (storedUser) {
           try {
             const userData = JSON.parse(storedUser);
-            setUser(userData);
+            // Ensure address flags exist (compute if missing)
+            const flags = computeAddressFlags(userData);
+            const merged = { ...userData, ...flags };
+            setUser(merged);
             console.log("✅ User loaded from localStorage:", {
-              id: userData.id, // Prefix ID
-              name: userData.name,
-              role: userData.role
+              id: merged.id, // Prefix ID
+              name: merged.name,
+              role: merged.role
             });
           } catch (e) {
             console.error("Error parsing stored user data:", e);
@@ -156,6 +176,7 @@ const AppContent = () => {
           has_customer: userData.has_customer
         });
 
+        const flags = computeAddressFlags(userData);
         const updatedUser = {
           id: userData.id, // Store prefix ID
           email: userData.email,
@@ -169,6 +190,9 @@ const AppContent = () => {
           state: userData.state || null,
           country: userData.country || 'India',
           pincode: userData.pincode || null,
+          // attach derived flags
+          hasCompleteAddress: flags.hasCompleteAddress,
+          hasNoAddress: flags.hasNoAddress,
           phone: userData.phone || null
         };
 

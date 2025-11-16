@@ -121,7 +121,7 @@ const About = () => {
             </p>
             <p>
               Today, AgriCare serves thousands of farmers and customers across the region, facilitating 
-              millions of dollars in direct trade while promoting sustainable farming practices and 
+              millions of rupees in direct trade while promoting sustainable farming practices and 
               food security for local communities.
             </p>
           </div>

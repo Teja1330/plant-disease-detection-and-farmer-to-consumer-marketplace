@@ -19,7 +19,6 @@ import { handleScroll } from "@/components/Navbar";
 import { farmerAPI } from "@/api";
 import { useUser } from "../../App";
 import AddressForm from "@/components/AddressForm";
-import { hasCompleteAddress, hasNoAddress } from "@/lib/address";
 
 const Store = () => {
   const { toast } = useToast();
@@ -28,8 +27,8 @@ const Store = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("products");
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const hasAddress = hasCompleteAddress(user);
-  const noAddress = hasNoAddress(user);
+  const hasAddress = user?.hasCompleteAddress;
+  const noAddress = user?.hasNoAddress;
 
   console.log("🏪 Store - User address status:", {
     id: user?.id, // Prefix ID
@@ -317,7 +316,7 @@ const Store = () => {
                     >
                       <Card className="hover:shadow-medium transition-all duration-300 bg-white border h-full flex flex-col">
                         <CardContent className="p-3 flex flex-col flex-grow">
-                          <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center relative mb-3">
+                          <div className="max-h-40 bg-gray-100 rounded-lg flex items-center justify-center relative mb-3 overflow-hidden">
                             {product.image_url ? (
                               <img
                                 src={product.image_url}
@@ -330,7 +329,7 @@ const Store = () => {
                               />
                             ) : null}
                             <div className={`flex items-center justify-center ${product.image_url ? 'hidden' : 'flex'}`}>
-                              <Leaf className="h-8 w-8 text-green-300" />
+                              <Leaf className="h-6 w-6 text-green-300" />
                             </div>
 
                             {product.organic && (
@@ -358,7 +357,7 @@ const Store = () => {
 
                             <div className="flex items-center justify-between mt-auto">
                               <span className="text-sm font-bold text-green-600">
-                                ${parseFloat(product.price).toFixed(2)}/{product.unit}
+                                ₹{parseFloat(product.price).toFixed(2)}/{product.unit}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 Stock: {product.stock}

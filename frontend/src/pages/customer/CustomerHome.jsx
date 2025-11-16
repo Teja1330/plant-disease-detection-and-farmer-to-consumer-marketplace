@@ -261,7 +261,7 @@ const CustomerHome = () => {
                 >
                   <Card className="hover:shadow-lg transition-all duration-300 bg-white border border-gray-200">
                     <CardContent className="p-0">
-                      <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center relative">
+                      <div className="max-h-48 bg-gray-100 rounded-t-lg flex items-center justify-center relative overflow-hidden">
                         {product.image_url ? (
                           <img
                             src={product.image_url}
@@ -269,7 +269,7 @@ const CustomerHome = () => {
                             className="w-full h-full object-cover rounded-t-lg"
                           />
                         ) : (
-                          <Leaf className="h-12 w-12 text-green-300" />
+                          <Leaf className="h-8 w-8 text-green-300" />
                         )}
                         {product.organic && (
                           <div className="absolute top-2 left-2 w-3 h-3 bg-green-500 rounded-full" />
@@ -299,7 +299,7 @@ const CustomerHome = () => {
                         
                         <div className="flex items-center justify-between">
                           <span className="text-lg font-bold text-green-600">
-                            ${parseFloat(product.price).toFixed(2)}/{product.unit}
+                            ₹{parseFloat(product.price).toFixed(2)}/{product.unit}
                           </span>
                           <Button 
                             size="sm" 

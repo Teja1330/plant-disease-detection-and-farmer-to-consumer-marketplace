@@ -16,7 +16,7 @@ import {
   MapPin,
   Phone,
   Mail,
-  DollarSign,
+  TrendingUp,
   User,
   RefreshCw
 } from "lucide-react";
@@ -147,8 +147,8 @@ const Orders = () => {
                   <span>Ordered {new Date(order.order_date).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <DollarSign className="h-4 w-4" />
-                  <span>${parseFloat(order.total_amount).toFixed(2)}</span>
+                  <TrendingUp className="h-4 w-4" />
+                  <span>₹{parseFloat(order.total_amount).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -198,7 +198,7 @@ const Orders = () => {
                   <span className="font-medium">{item.product_name}</span>
                   <span className="text-gray-500 ml-2">({item.quantity} units)</span>
                 </div>
-                <span className="font-semibold">${(item.unit_price * item.quantity).toFixed(2)}</span>
+                <span className="font-semibold">₹{(item.unit_price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
           </div>

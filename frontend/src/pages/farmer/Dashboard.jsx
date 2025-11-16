@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { 
   Package, 
   ShoppingCart, 
-  DollarSign, 
   TrendingUp,
   AlertTriangle,
   Clock,
@@ -139,9 +138,9 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                  <p className="text-3xl font-bold text-gray-900">${stats.total_revenue}</p>
+                  <p className="text-3xl font-bold text-gray-900">₹{stats.total_revenue}</p>
                 </div>
-                <DollarSign className="h-8 w-8 text-yellow-600" />
+                <TrendingUp className="h-8 w-8 text-yellow-600" />
               </div>
             </CardContent>
           </Card>
@@ -183,7 +182,7 @@ const Dashboard = () => {
                         <div>
                           <p className="font-semibold">{order.order_id}</p>
                           <p className="text-sm text-gray-600">{order.customer_name}</p>
-                          <p className="text-sm text-gray-500">${order.total_amount}</p>
+                          <p className="text-sm text-gray-500">₹{order.total_amount}</p>
                         </div>
                         <Badge className={getStatusColor(order.status)}>
                           {order.status}

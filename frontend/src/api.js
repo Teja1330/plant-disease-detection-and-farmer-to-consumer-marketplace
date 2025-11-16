@@ -182,17 +182,17 @@ export const authAPI = {
 
 export const addressAPI = {
   getCurrentAddress: async () => {
-    const response = await api.get('/users/me/');
+    const response = await API.get('/user');
     return response;
   },
 
   updateAddress: async (addressData) => {
-    const response = await api.patch('/users/update-address/', addressData);
+    const response = await API.patch('/update-address/', addressData);
     return response;
   },
 
   getAvailableDistricts: async () => {
-    const response = await api.get('/users/available-districts/');
+    const response = await API.get('/available-districts/');
     return response;
   }
 };

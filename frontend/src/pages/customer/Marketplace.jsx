@@ -135,7 +135,7 @@ const Marketplace = () => {
           }`}
       >
         <CardContent className="p-0">
-          <div className="aspect-square bg-gray-100 rounded-t-lg flex items-center justify-center relative">
+          <div className="max-h-48 bg-gray-100 rounded-t-lg flex items-center justify-center relative overflow-hidden">
             {product.image_url ? (
               <img
                 src={product.image_url}
@@ -143,7 +143,7 @@ const Marketplace = () => {
                 className="w-full h-full object-cover rounded-t-lg"
               />
             ) : (
-              <Leaf className="h-12 w-12 text-green-300" />
+              <Leaf className="h-8 w-8 text-green-300" />
             )}
             {product.organic && (
               <Badge className="absolute top-2 left-2 bg-green-500 text-white text-xs">
@@ -184,7 +184,7 @@ const Marketplace = () => {
 
             <div className="flex items-center justify-between">
               <span className="text-lg font-bold text-green-600">
-                ${parseFloat(product.price).toFixed(2)}/{product.unit}
+                ₹{parseFloat(product.price).toFixed(2)}/{product.unit}
               </span>
               <Button
                 size="sm"
